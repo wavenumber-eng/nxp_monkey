@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey families</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey families</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / families</div>
+</header>
+
+<section data-command="families" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    List downloadable processor families. By default, returns the merged
+    portfolio view (one entry per family, mapped to the newest tool version
+    that publishes it). With an explicit <code>--version</code>, returns only
+    families published in that exact tool version.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey families [--version VERSION] [--portfolio-latest] [--limit N]</code></pre>
+
+  <h2>Arguments</h2>
+  <table>
+    <tr><th>Flag</th><th>Effect</th></tr>
+    <tr><td>--version VERSION</td><td>Restrict to one tool version.</td></tr>
+    <tr><td>--portfolio-latest</td><td>Explicit form of the default (newest version per family).</td></tr>
+    <tr><td>--limit N</td><td>Truncate the output to the first N families.</td></tr>
+  </table>
+
+  <h2>Output</h2>
+  <p>
+    Default and <code>--portfolio-latest</code> mode: tab-separated
+    <code>family\tversion</code>. Version-pinned mode: one family name per line.
+  </p>
+
+  <h2>--json mode</h2>
+  <p>
+    With the global <code>--json</code> flag, <code>families</code> writes
+    <code>families.json</code> to the working directory (mode tag plus the
+    family list with versions when in portfolio-latest mode) and prints
+    that path on stdout instead of the lines / table.
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code>nxp_monkey.portfolio_latest_map()
+nxp_monkey.list_families(version="25.12.10")</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_families_cli.py</code></li>
+    <li><code>tests/L3_public_workflows/test_kex_client.py</code></li>
+  </ul>
+
+  <h2>Related</h2>
+  <ul>
+    <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a></li>
+    <li><a href="../../adrs/ADR-0008-sdk-variant-policy.md">ADR-0008</a></li>
+  </ul>
+</section>
+</body>
+</html>

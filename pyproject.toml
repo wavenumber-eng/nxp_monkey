@@ -1,0 +1,115 @@
+[project]
+name = "nxp-monkey"
+version = "2026.5.29"
+description = "Cross-platform CLI and Python library for NXP MCUXpresso Config Tools chip data"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "Wavenumber LLC" },
+]
+keywords = ["nxp", "mcuxpresso", "kex", "chip-data", "pinout", "embedded"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Embedded Systems",
+]
+dependencies = [
+    "platformdirs>=4.0.0",
+    "rich>=13.0.0",
+    "rich-argparse>=1.5.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "jsonschema>=4.0.0",
+    "pytest>=8.0.0",
+    "pyright>=1.1.390",
+    "ruff>=0.8.0",
+    "twine>=5.0.0",
+    "build>=1.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "jsonschema>=4.0.0",
+    "pytest>=8.0.0",
+    "pyright>=1.1.390",
+    "ruff>=0.8.0",
+    "twine>=5.0.0",
+    "build>=1.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/wavenumber-eng/nxp_monkey"
+Repository = "https://github.com/wavenumber-eng/nxp_monkey"
+Issues = "https://github.com/wavenumber-eng/nxp_monkey/issues"
+
+[project.scripts]
+nxp-monkey = "nxp_monkey._cli:main"
+nxpm = "nxp_monkey._cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/py/nxp_monkey/**",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "docs/adrs/**",
+    "docs/design/**",
+    "docs/contracts/**",
+    "docs/releases/**",
+    "tests/**",
+    "pyproject.toml",
+]
+exclude = [
+    "docs/plans/**",
+    "docs/research/**",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/py/nxp_monkey"]
+
+[tool.hatch.version]
+path = "src/py/nxp_monkey/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src/py", "."]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "network: tests that hit the live NXP KEX API",
+    "slow: long-running tests",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "D"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.pyright]
+include = ["src/py/nxp_monkey", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"

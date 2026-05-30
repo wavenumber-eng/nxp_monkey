@@ -1,0 +1,231 @@
+{
+  "$schema": "./schemas/interface_design_manifest.schema.v0.json",
+  "manifest_version": "0",
+  "tool": "nxp-monkey",
+  "interfaces": [
+    {
+      "symbol": "ApiVersion",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "StorageEntry",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "PartInfo",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "SearchHit",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "IndexMeta",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "Processor",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "DbLink",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "CpuCore",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "PackageVariant",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "PartDetails",
+      "kind": "dataclass",
+      "module": "nxp_monkey.models",
+      "design_doc": "docs/design/api/models.html",
+      "test_file": "tests/L3_public_workflows/test_models.py"
+    },
+    {
+      "symbol": "details",
+      "kind": "function",
+      "module": "nxp_monkey.details",
+      "design_doc": "docs/design/api/details.html",
+      "test_file": "tests/L3_public_workflows/test_details.py"
+    },
+    {
+      "symbol": "details_from_cache",
+      "kind": "function",
+      "module": "nxp_monkey.details",
+      "design_doc": "docs/design/api/details.html",
+      "test_file": "tests/L3_public_workflows/test_details.py"
+    },
+    {
+      "symbol": "KexClient",
+      "kind": "class",
+      "module": "nxp_monkey.kex_client",
+      "design_doc": "docs/design/api/kex_client.html",
+      "test_file": "tests/L3_public_workflows/test_kex_client.py"
+    },
+    {
+      "symbol": "NxpFetchError",
+      "kind": "exception",
+      "module": "nxp_monkey.kex_client",
+      "design_doc": "docs/design/api/kex_client.html",
+      "test_file": "tests/L3_public_workflows/test_kex_client.py"
+    },
+    {
+      "symbol": "list_versions",
+      "kind": "function",
+      "module": "nxp_monkey.kex_client",
+      "design_doc": "docs/design/api/kex_client.html",
+      "test_file": "tests/L3_public_workflows/test_kex_client.py"
+    },
+    {
+      "symbol": "latest_version",
+      "kind": "function",
+      "module": "nxp_monkey.kex_client",
+      "design_doc": "docs/design/api/kex_client.html",
+      "test_file": "tests/L3_public_workflows/test_kex_client.py"
+    },
+    {
+      "symbol": "list_families",
+      "kind": "function",
+      "module": "nxp_monkey.kex_client",
+      "design_doc": "docs/design/api/kex_client.html",
+      "test_file": "tests/L3_public_workflows/test_kex_client.py"
+    },
+    {
+      "symbol": "portfolio_latest_map",
+      "kind": "function",
+      "module": "nxp_monkey.kex_client",
+      "design_doc": "docs/design/api/kex_client.html",
+      "test_file": "tests/L3_public_workflows/test_kex_client.py"
+    },
+    {
+      "symbol": "fetch",
+      "kind": "function",
+      "module": "nxp_monkey.fetch",
+      "design_doc": "docs/design/api/fetch.html",
+      "test_file": "tests/L3_public_workflows/test_fetch.py"
+    },
+    {
+      "symbol": "fetch_all",
+      "kind": "function",
+      "module": "nxp_monkey.fetch",
+      "design_doc": "docs/design/api/fetch.html",
+      "test_file": "tests/L3_public_workflows/test_fetch.py"
+    },
+    {
+      "symbol": "search",
+      "kind": "function",
+      "module": "nxp_monkey.search",
+      "design_doc": "docs/design/api/search.html",
+      "test_file": "tests/L3_public_workflows/test_search.py"
+    },
+    {
+      "symbol": "part_variants",
+      "kind": "function",
+      "module": "nxp_monkey.search",
+      "design_doc": "docs/design/api/search.html",
+      "test_file": "tests/L3_public_workflows/test_search.py"
+    },
+    {
+      "symbol": "build_index",
+      "kind": "function",
+      "module": "nxp_monkey.index",
+      "design_doc": "docs/design/api/index.html",
+      "test_file": "tests/L3_public_workflows/test_index.py"
+    },
+    {
+      "symbol": "get_part",
+      "kind": "function",
+      "module": "nxp_monkey.index",
+      "design_doc": "docs/design/api/index.html",
+      "test_file": "tests/L3_public_workflows/test_index.py"
+    },
+    {
+      "symbol": "open_index",
+      "kind": "function",
+      "module": "nxp_monkey.index",
+      "design_doc": "docs/design/api/index.html",
+      "test_file": "tests/L3_public_workflows/test_index.py"
+    },
+    {
+      "symbol": "index_meta",
+      "kind": "function",
+      "module": "nxp_monkey.index",
+      "design_doc": "docs/design/api/index.html",
+      "test_file": "tests/L3_public_workflows/test_index.py"
+    },
+    {
+      "symbol": "build_roadmap",
+      "kind": "function",
+      "module": "nxp_monkey.roadmap",
+      "design_doc": "docs/design/api/roadmap.html",
+      "test_file": "tests/L3_public_workflows/test_roadmap.py"
+    },
+    {
+      "symbol": "cache_path",
+      "kind": "function",
+      "module": "nxp_monkey.cache",
+      "design_doc": "docs/design/api/cache.html",
+      "test_file": "tests/L3_public_workflows/test_cache.py"
+    },
+    {
+      "symbol": "cache_size",
+      "kind": "function",
+      "module": "nxp_monkey.cache",
+      "design_doc": "docs/design/api/cache.html",
+      "test_file": "tests/L3_public_workflows/test_cache.py"
+    },
+    {
+      "symbol": "cache_clear",
+      "kind": "function",
+      "module": "nxp_monkey.cache",
+      "design_doc": "docs/design/api/cache.html",
+      "test_file": "tests/L3_public_workflows/test_cache.py"
+    },
+    {
+      "symbol": "xml_file_to_dict",
+      "kind": "function",
+      "module": "nxp_monkey.xml_json",
+      "design_doc": "docs/design/api/xml_json.html",
+      "test_file": "tests/L3_public_workflows/test_xml_json.py"
+    },
+    {
+      "symbol": "mirror_xml_tree_as_json",
+      "kind": "function",
+      "module": "nxp_monkey.xml_json",
+      "design_doc": "docs/design/api/xml_json.html",
+      "test_file": "tests/L3_public_workflows/test_xml_json.py"
+    }
+  ]
+}

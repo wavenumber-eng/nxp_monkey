@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "interface_design_manifest.schema.v0.json",
+  "title": "nxp_monkey interface design manifest",
+  "type": "object",
+  "required": ["manifest_version", "tool", "interfaces"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifest_version": { "const": "0" },
+    "tool": { "const": "nxp-monkey" },
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "kind", "module", "design_doc", "test_file"],
+        "additionalProperties": false,
+        "properties": {
+          "symbol": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "kind": {
+            "enum": ["function", "class", "dataclass", "exception"]
+          },
+          "module": { "type": "string", "pattern": "^nxp_monkey(\\.[a-z_]+)*$" },
+          "design_doc": {
+            "type": "string",
+            "pattern": "^docs/design/api/[a-z_]+\\.html$"
+          },
+          "test_file": {
+            "type": "string",
+            "pattern": "^tests/.+\\.py$"
+          }
+        }
+      }
+    }
+  }
+}

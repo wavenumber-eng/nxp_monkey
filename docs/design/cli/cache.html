@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey cache</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey cache</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / cache</div>
+</header>
+
+<section data-command="cache" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Inspect or manage the platformdirs-managed nxp_monkey cache.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey cache path
+nxp-monkey cache size
+nxp-monkey cache clear [--scope SCOPE]</code></pre>
+
+  <h2>Actions</h2>
+  <table>
+    <tr><th>Action</th><th>Effect</th></tr>
+    <tr><td>path</td><td>Print the cache root directory.</td></tr>
+    <tr><td>size</td><td>Print total cache size in bytes and human form.</td></tr>
+    <tr><td>clear --scope SCOPE</td><td>Remove cached content. SCOPE is <code>all</code>, <code>versions</code>, <code>index</code>, or a specific tool version like <code>25.12.10</code>.</td></tr>
+  </table>
+
+  <h2>Layout</h2>
+  <p>
+    See <a href="../../adrs/ADR-0006-cache-directory-contract.md">ADR-0006</a>
+    for the full directory contract.
+  </p>
+
+  <h2>--json mode</h2>
+  <p>
+    With the global <code>--json</code> flag, <code>cache</code> writes
+    <code>cache.json</code> to the working directory (action result: path,
+    size summary, or clear summary) and prints that path on stdout.
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code>nxp_monkey.cache_path()
+nxp_monkey.cache_size()
+nxp_monkey.cache_clear(scope="all")</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_cache_cli.py</code></li>
+    <li><code>tests/L3_public_workflows/test_cache.py</code></li>
+  </ul>
+</section>
+</body>
+</html>

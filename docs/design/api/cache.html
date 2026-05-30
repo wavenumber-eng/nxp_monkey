@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.cache</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.cache</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / cache</div>
+</header>
+
+<section data-interface="cache_path" data-test-file="tests/L3_public_workflows/test_cache.py" data-test-target="cache_path">
+  <h2>cache_path</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Return the cache root <code>pathlib.Path</code>. Cross-platform via
+    <code>platformdirs</code>. See
+    <a href="../../adrs/ADR-0006-cache-directory-contract.md">ADR-0006</a>
+    for the full layout contract.
+  </p>
+  <h3>Rationale</h3>
+  <p>
+    Downstream tools and agents need a stable, programmatic way to find the
+    cache without re-implementing platformdirs logic. Returning a
+    <code>Path</code> (not a string) keeps callers honest about path
+    handling on Windows.
+  </p>
+</section>
+
+<section data-interface="cache_size" data-test-file="tests/L3_public_workflows/test_cache.py" data-test-target="cache_size">
+  <h2>cache_size</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Return the total byte size of files under the cache root. Returns 0
+    when the cache is empty. Iterates with <code>rglob</code>; not intended
+    for sub-second polling.
+  </p>
+</section>
+
+<section data-interface="cache_clear" data-test-file="tests/L3_public_workflows/test_cache.py" data-test-target="cache_clear">
+  <h2>cache_clear</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Remove cached content. The <code>scope</code> argument selects what to
+    remove (<code>"all"</code>, <code>"versions"</code>, <code>"index"</code>,
+    or a specific tool version label).
+  </p>
+  <h3>Safety</h3>
+  <p>
+    Per ADR-0006, only re-fetchable upstream content lives under the cache
+    root, so clearing is always safe. Future scopes that touch user-owned
+    state would require an ADR.
+  </p>
+</section>
+</body>
+</html>

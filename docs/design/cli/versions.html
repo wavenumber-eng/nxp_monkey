@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey versions</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey versions</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / versions</div>
+</header>
+
+<section data-command="versions" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    List MCUXpresso Config Tools API versions known to NXP's KEX
+    <code>npidb</code> endpoint. This is the discovery entry point: users
+    rarely need an explicit version, but they may want to inspect what NXP
+    currently publishes.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey versions [--latest] [--include-unpublished] [--refresh]</code></pre>
+
+  <h2>Arguments</h2>
+  <table>
+    <tr><th>Flag</th><th>Effect</th></tr>
+    <tr><td>--latest</td><td>Print only the highest published version and exit.</td></tr>
+    <tr><td>--include-unpublished</td><td>Include rows with an empty <code>version</code> field.</td></tr>
+    <tr><td>--refresh</td><td>Bypass the 24h local cache and re-fetch from NXP.</td></tr>
+  </table>
+
+  <h2>Output</h2>
+  <p>
+    Default output is a tab-separated table on stdout with columns
+    <code>name</code>, <code>api_id</code>, <code>version</code>, <code>stable</code>.
+    With <code>--latest</code>, prints exactly one line containing the version
+    name (for example <code>25.12.10</code>).
+  </p>
+
+  <h2>--json mode</h2>
+  <p>
+    With the global <code>--json</code> flag, <code>versions</code> writes
+    <code>versions.json</code> to the working directory (rows + the resolved
+    <code>latest</code>) and prints that path on stdout instead of the table.
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code>nxp_monkey.list_versions(refresh=False)
+nxp_monkey.latest_version()</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_versions_cli.py</code> — argparse smoke.</li>
+    <li><code>tests/L3_public_workflows/test_kex_client.py</code> — offline fixture.</li>
+  </ul>
+
+  <h2>Related</h2>
+  <ul>
+    <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007 KEX upstream and version resolution</a></li>
+  </ul>
+</section>
+</body>
+</html>

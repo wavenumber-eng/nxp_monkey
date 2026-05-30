@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.roadmap</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.roadmap</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / roadmap</div>
+</header>
+
+<section data-interface="build_roadmap" data-test-file="tests/L3_public_workflows/test_roadmap.py" data-test-target="build_roadmap">
+  <h2>build_roadmap(part_root)</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Walk a <code>processors/&lt;PART&gt;/&lt;VARIANT&gt;/</code> tree
+    and return a JSON-friendly <code>dict</code> describing it. The
+    returned shape includes:
+  </p>
+  <ul>
+    <li><code>part</code>, <code>variant</code>, <code>root</code></li>
+    <li>
+      <code>guide</code> — short ordered list of steps for an agent
+      reading the tree (variant-aware).
+    </li>
+    <li>
+      <code>key_files</code> — logical name → relative path for the
+      spine files (<code>&lt;PART&gt;.xml</code>,
+      <code>common/cores_info.xml</code>,
+      <code>common/sdk_features.xml</code>,
+      <code>sdk/sdk_components.xml</code>,
+      <code>processor.properties</code>,
+      <code>module_clocks.xml</code>).
+    </li>
+    <li>
+      <code>optional_sections</code> — presence flags for
+      <code>security/</code>, <code>dcdx/</code>, <code>ddr/</code>,
+      <code>mem_validation/</code>.
+    </li>
+    <li>
+      <code>package_variants</code> — per-package SKU directories with
+      their sibling <code>&lt;VARIANT&gt;.xml</code> manifests.
+    </li>
+    <li>
+      <code>codegen</code> — scripts root, category list, and
+      Zephyr-DT entry points (when the variant ships them).
+    </li>
+    <li>
+      <code>xml_namespaces</code> — every distinct <code>xmlns</code>
+      URI seen in the tree, with parsed family + version and a short
+      label for recognized families
+      (<code>registers</code>, <code>clocks</code>,
+      <code>pinsModel</code>, <code>part_number</code>,
+      <code>processor</code>, <code>dcd</code>). There are no public
+      XSDs; this is identifier-only.
+    </li>
+    <li>
+      <code>notes</code> — caveats about the schema universe and the
+      canonical <code>ksdk2_0</code> binder.
+    </li>
+  </ul>
+  <h3>Caveats</h3>
+  <p>
+    Pure on-disk read; does not fetch. Pass a path obtained from
+    <code>fetch()</code>, <code>details().root</code>, or a mirrored
+    tree under <code>--output</code>.
+  </p>
+</section>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="../cli/roadmap.html">CLI: roadmap</a></li>
+  <li><a href="details.html">API: details</a></li>
+  <li><a href="fetch.html">API: fetch</a></li>
+  <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a></li>
+  <li><a href="../../adrs/ADR-0008-sdk-variant-policy.md">ADR-0008</a></li>
+</ul>
+</body>
+</html>

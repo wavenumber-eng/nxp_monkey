@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "command_manifest.schema.v0.json",
+  "title": "nxp_monkey command manifest",
+  "type": "object",
+  "required": ["manifest_version", "tool", "commands"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifest_version": { "const": "0" },
+    "tool": { "const": "nxp-monkey" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "design_doc", "config_contract", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "design_doc": {
+            "type": "string",
+            "pattern": "^docs/design/cli/[a-z][a-z0-9-]*\\.html$"
+          },
+          "config_contract": {
+            "oneOf": [
+              { "const": "none" },
+              { "type": "string", "pattern": "^docs/contracts/.+\\.json$" }
+            ]
+          },
+          "summary": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

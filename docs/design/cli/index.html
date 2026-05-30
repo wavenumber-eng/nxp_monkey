@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey index</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey index</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / index</div>
+</header>
+
+<section data-command="index" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Build and inspect the local SQLite + FTS5 search index. The index is the
+    backing store for <code>nxp-monkey search</code> and for agent / LLM
+    workflows that need a single fast queryable view of "what parts are
+    available."
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey index build [--variant VARIANT] [--probe-variants]
+nxp-monkey index show PART
+nxp-monkey index info</code></pre>
+
+  <h2>Actions</h2>
+  <table>
+    <tr><th>Action</th><th>Effect</th></tr>
+    <tr><td>build</td><td>Populate or refresh the index from the KEX portfolio-latest view.</td></tr>
+    <tr><td>show PART</td><td>Print the recorded info for one part.</td></tr>
+    <tr><td>info</td><td>Print build metadata (built_at, source_version, counts).</td></tr>
+  </table>
+
+  <h2>Storage</h2>
+  <p>
+    SQLite database at <code>cache_path() / "index" / "nxp_monkey_index.sqlite"</code>
+    plus a JSON sidecar at <code>nxp_monkey_index.meta.json</code>. See
+    <a href="../../adrs/ADR-0006-cache-directory-contract.md">ADR-0006</a>.
+  </p>
+
+  <h2>--json mode</h2>
+  <p>
+    With the global <code>--json</code> flag, <code>index</code> writes
+    <code>index.json</code> to the working directory (action result: meta
+    for <code>info</code>, the part record for <code>show</code>, build
+    counts for <code>build</code>) and prints that path on stdout.
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code>nxp_monkey.build_index()
+nxp_monkey.get_part("MCXA156")
+nxp_monkey.index_meta()</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_index_cli.py</code></li>
+    <li><code>tests/L3_public_workflows/test_index.py</code></li>
+  </ul>
+</section>
+</body>
+</html>

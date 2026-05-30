@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey help</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey help</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / help</div>
+</header>
+
+<section data-command="help" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Convenience alias: <code>nxp-monkey help &lt;cmd&gt;</code> is equivalent
+    to <code>nxp-monkey &lt;cmd&gt; --help</code>. With no topic, prints the
+    top-level help.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey help
+nxp-monkey help COMMAND</code></pre>
+
+  <h2>Output</h2>
+  <p>
+    Whatever the targeted subparser's <code>--help</code> prints. No other
+    side effects.
+  </p>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_help_cli.py</code></li>
+  </ul>
+</section>
+</body>
+</html>

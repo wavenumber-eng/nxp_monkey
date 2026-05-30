@@ -1,0 +1,61 @@
+{
+  "$schema": "./schemas/command_manifest.schema.v0.json",
+  "manifest_version": "0",
+  "tool": "nxp-monkey",
+  "commands": [
+    {
+      "name": "versions",
+      "design_doc": "docs/design/cli/versions.html",
+      "config_contract": "none",
+      "summary": "List MCUXpresso tool versions published by NXP"
+    },
+    {
+      "name": "families",
+      "design_doc": "docs/design/cli/families.html",
+      "config_contract": "none",
+      "summary": "List downloadable processor families"
+    },
+    {
+      "name": "search",
+      "design_doc": "docs/design/cli/search.html",
+      "config_contract": "none",
+      "summary": "Search the local index for parts"
+    },
+    {
+      "name": "index",
+      "design_doc": "docs/design/cli/index.html",
+      "config_contract": "none",
+      "summary": "Build and inspect the local search index"
+    },
+    {
+      "name": "fetch",
+      "design_doc": "docs/design/cli/fetch.html",
+      "config_contract": "none",
+      "summary": "Fetch one or more parts' data trees into the local cache"
+    },
+    {
+      "name": "details",
+      "design_doc": "docs/design/cli/details.html",
+      "config_contract": "none",
+      "summary": "Show structured details for one part (header, cores, variants)"
+    },
+    {
+      "name": "roadmap",
+      "design_doc": "docs/design/cli/roadmap.html",
+      "config_contract": "none",
+      "summary": "Print a per-part inferred-schema + agent guide for one tree"
+    },
+    {
+      "name": "cache",
+      "design_doc": "docs/design/cli/cache.html",
+      "config_contract": "none",
+      "summary": "Inspect and manage the on-disk cache"
+    },
+    {
+      "name": "help",
+      "design_doc": "docs/design/cli/help.html",
+      "config_contract": "none",
+      "summary": "Show help for another command"
+    }
+  ]
+}

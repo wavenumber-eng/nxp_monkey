@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.kex_client</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.kex_client</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / kex_client</div>
+</header>
+
+<section data-interface="KexClient" data-test-file="tests/L3_public_workflows/test_kex_client.py" data-test-target="KexClient">
+  <h2>KexClient</h2>
+  <p><strong>Kind:</strong> class.</p>
+  <p>
+    HTTP client for NXP's public KEX storage API. This is the only place in
+    the package that knows upstream URL shapes; everything else goes through
+    it. See <a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a>.
+  </p>
+  <h3>Why a class</h3>
+  <p>
+    The client carries cache state (version list, portfolio map) and resolves
+    versions lazily across many calls in one logical session. Using a class
+    avoids re-fetching the version list on every operation and lets tests
+    inject pre-populated caches.
+  </p>
+  <h3>Working definition</h3>
+  <p>
+    A <code>KexClient</code> with no <code>version</code> argument behaves as
+    "give me the latest reasonable answer for any part you ask about." With an
+    explicit version, it behaves as "answer everything against this exact
+    tool version."
+  </p>
+  <h3>Key methods</h3>
+  <ul>
+    <li><code>list_versions(refresh=False)</code></li>
+    <li><code>latest_version()</code></li>
+    <li><code>resolve_version(version=None)</code></li>
+    <li><code>resolve_version_for_family(family)</code></li>
+    <li><code>portfolio_latest_map(refresh=False)</code></li>
+    <li><code>list_storage_entries(path, version=None)</code></li>
+    <li><code>list_processor_families(version=None)</code></li>
+    <li><code>discover_family_variants(family, variants=None, version=None)</code></li>
+    <li><code>download_directory_zip(family, variant, output_zip, version=None)</code></li>
+  </ul>
+</section>
+
+<section data-interface="NxpFetchError" data-test-file="tests/L3_public_workflows/test_kex_client.py" data-test-target="NxpFetchError">
+  <h2>NxpFetchError</h2>
+  <p><strong>Kind:</strong> exception.</p>
+  <p>
+    Raised whenever the KEX upstream cannot be fetched, parsed, or extracted
+    safely. The package never silently swallows upstream failures: anything
+    that prevents data acquisition surfaces as this exception.
+  </p>
+</section>
+
+<section data-interface="list_versions" data-test-file="tests/L3_public_workflows/test_kex_client.py" data-test-target="list_versions">
+  <h2>list_versions</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Stateless convenience wrapper for callers that do not want to manage a
+    <code>KexClient</code> instance. Equivalent to
+    <code>KexClient().list_versions(refresh=refresh)</code>.
+  </p>
+</section>
+
+<section data-interface="latest_version" data-test-file="tests/L3_public_workflows/test_kex_client.py" data-test-target="latest_version">
+  <h2>latest_version</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Stateless convenience wrapper. Returns the highest published tool
+    version name.
+  </p>
+</section>
+
+<section data-interface="list_families" data-test-file="tests/L3_public_workflows/test_kex_client.py" data-test-target="list_families">
+  <h2>list_families</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Stateless convenience wrapper. Returns the processor families published
+    for one tool version (or the latest by default).
+  </p>
+</section>
+
+<section data-interface="portfolio_latest_map" data-test-file="tests/L3_public_workflows/test_kex_client.py" data-test-target="portfolio_latest_map">
+  <h2>portfolio_latest_map</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Stateless convenience wrapper. Returns the merged family-to-version map
+    used by ADR-0007 to handle frozen families.
+  </p>
+</section>
+</body>
+</html>

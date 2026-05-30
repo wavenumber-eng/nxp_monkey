@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.xml_json</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.xml_json</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / xml_json</div>
+</header>
+
+<section data-interface="xml_file_to_dict" data-test-file="tests/L3_public_workflows/test_xml_json.py" data-test-target="xml_file_to_dict">
+  <h2>xml_file_to_dict(path)</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Parse one KEX XML file and return a JSON-friendly <code>dict</code>.
+    The conversion is lossless for data:
+  </p>
+  <ul>
+    <li>Element tags are namespace-stripped (the local name).</li>
+    <li>Attributes become <code>"@name"</code> keys.</li>
+    <li>Mixed text content lives under <code>"#text"</code>; pure-text
+        leaves collapse to their string value.</li>
+    <li>Repeated child elements become lists; singletons remain dicts.</li>
+    <li>Empty elements collapse to <code>None</code>.</li>
+    <li>
+      The source <code>xmlns</code> declarations from the root element
+      are preserved on the root's value under <code>"@_xmlns"</code>
+      so the namespace family is still recoverable.
+    </li>
+  </ul>
+  <h3>Rationale</h3>
+  <p>
+    NXP publishes no XSDs, but agents that only speak JSON still need
+    to read every byte of the silicon data. A namespace-stripped tree
+    with an <code>@_xmlns</code> sidecar gives readability without
+    losing the namespace family. xmltodict-style conventions keep the
+    output predictable.
+  </p>
+</section>
+
+<section data-interface="mirror_xml_tree_as_json" data-test-file="tests/L3_public_workflows/test_xml_json.py" data-test-target="mirror_xml_tree_as_json">
+  <h2>mirror_xml_tree_as_json(xml_root, json_root, *, include=None, exclude=None, progress_callback=None)</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Walk every <code>.xml</code> under <code>xml_root</code> and write a
+    parallel <code>.json</code> tree under <code>json_root</code>. The
+    path mapping is one-to-one: <code>a/b/c.xml</code> becomes
+    <code>a/b/c.json</code>. Existing destination files are overwritten.
+    Files that fail to parse are skipped silently; the raw XML is still
+    available under <code>xml_root</code>. Returns the number of
+    successfully written JSON files.
+  </p>
+  <h3>Filters</h3>
+  <p>
+    <code>include</code> and <code>exclude</code> are lists of fnmatch
+    glob patterns evaluated against the <code>xml_root</code>-relative
+    forward-slash path. When <code>include</code> is non-empty, only
+    matching files are converted. <code>exclude</code> is applied after.
+  </p>
+  <h3>Progress callback</h3>
+  <p>
+    <code>progress_callback</code> matches the
+    <code>ProgressCallback = Callable[[int, int, str], None]</code>
+    signature. It is invoked once with <code>(0, total, "")</code>
+    after filtering and before any file is written, then after each
+    successful conversion with
+    <code>(done, total, rel_posix)</code>. Parse failures advance
+    neither <code>done</code> nor <code>total</code>.
+  </p>
+  <h3>Caveats</h3>
+  <p>
+    Pure on-disk read/write; does not fetch. Use after
+    <code>fetch()</code> or against any KEX XML tree already on disk.
+    <code>fetch</code> drives this internally to populate
+    <code>DIR/&lt;PART&gt;/json/&lt;VARIANT&gt;/</code>; the public
+    function is for callers that want to re-mirror an existing tree or
+    apply different filters.
+  </p>
+</section>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="../cli/fetch.html">CLI: fetch (drives the mirror)</a></li>
+  <li><a href="fetch.html">API: fetch</a></li>
+  <li><a href="roadmap.html">API: build_roadmap</a></li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.details</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.details</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / details</div>
+</header>
+
+<section data-interface="details" data-test-file="tests/L3_public_workflows/test_details.py" data-test-target="details">
+  <h2>details(part, *, variant="ksdk2_0", version=None, client=None)</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Return a populated <a href="models.html">PartDetails</a> for
+    <code>part</code>. Fetches on demand if the local cache is empty,
+    then parses the small spine XML files:
+    <code>&lt;PART&gt;.xml</code>, <code>common/cores_info.xml</code>,
+    <code>processor.properties</code>, and one
+    <code>&lt;PART_VARIANT&gt;.xml</code> per package SKU.
+  </p>
+  <p>
+    Heavier payloads (per-peripheral registers, pin-mux model, clock
+    tree) are intentionally not parsed here. Reach them through the
+    returned <code>root</code> path and per-variant
+    <code>db_links</code>. See
+    <code>docs/research/xml_survey.md</code> for the schema universe.
+  </p>
+  <h3>Errors</h3>
+  <p>
+    Raises <code>NxpFetchError</code> when the part cannot be fetched
+    or when its <code>&lt;PART&gt;.xml</code> is missing or malformed.
+  </p>
+</section>
+
+<section data-interface="details_from_cache" data-test-file="tests/L3_public_workflows/test_details.py" data-test-target="details_from_cache">
+  <h2>details_from_cache(part, *, variant, version)</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Offline counterpart to <code>details()</code>. Builds a
+    <code>PartDetails</code> from an already-populated cache directory
+    without touching the network. Raises <code>NxpFetchError</code>
+    when the expected cache path is missing.
+  </p>
+  <h3>Use cases</h3>
+  <ul>
+    <li>Test fixtures with pre-staged cache trees.</li>
+    <li>Tools that arrange the cache themselves (e.g. mirrors).</li>
+    <li>Inspection during offline triage.</li>
+  </ul>
+</section>
+
+<h2>Related</h2>
+<ul>
+  <li><a href="../cli/details.html">CLI: details</a></li>
+  <li><a href="fetch.html">API: fetch</a></li>
+  <li><a href="models.html">API: models (Processor, PartDetails, ...)</a></li>
+  <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a></li>
+  <li><a href="../../adrs/ADR-0008-sdk-variant-policy.md">ADR-0008</a></li>
+</ul>
+</body>
+</html>

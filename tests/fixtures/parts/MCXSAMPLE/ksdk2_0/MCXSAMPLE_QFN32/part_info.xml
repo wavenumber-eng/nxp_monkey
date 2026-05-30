@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<part:part_info xmlns:part="http://swtools.freescale.net/XSD/part_info/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://swtools.freescale.net/XSD/part_info/1.0 http://swtools.freescale.net/XSD/part_info/1.0/part_info.xsd">
+  <requiresNDA>false</requiresNDA>
+</part:part_info>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.search</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.search</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / search</div>
+</header>
+
+<section data-interface="search" data-test-file="tests/L3_public_workflows/test_search.py" data-test-target="search">
+  <h2>search</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Search the local index for parts matching <code>query</code>. Returns a
+    ranked list of <code>SearchHit</code>. Empty list when the index has not
+    been built.
+  </p>
+  <h3>Rationale</h3>
+  <p>
+    The "easy way to find parts" entry point. Partial matches are
+    first-class: searching for <code>"MCXA"</code> returns every MCXA part
+    without needing wildcards. Fuzzy mode adds edit-ratio matches for typos
+    and is opt-in to keep the default output predictable.
+  </p>
+  <h3>Working definition</h3>
+  <p>
+    Given a query that may be a full part number, a family root, or a typo,
+    return the parts a human would expect to see, ordered best-first. The
+    exact scoring is documented in the CLI design doc and may evolve.
+  </p>
+</section>
+
+<section data-interface="part_variants" data-test-file="tests/L3_public_workflows/test_search.py" data-test-target="part_variants">
+  <h2>part_variants</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Look up the recorded SDK variant list for one part. Wrapper for the
+    common case of "which variants are available for this part" without
+    constructing a <code>PartInfo</code>.
+  </p>
+</section>
+</body>
+</html>

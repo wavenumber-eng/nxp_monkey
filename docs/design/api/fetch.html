@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.fetch</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.fetch</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / fetch</div>
+</header>
+
+<section data-interface="fetch" data-test-file="tests/L3_public_workflows/test_fetch.py" data-test-target="fetch">
+  <h2>fetch</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Fetch one part's data tree into the local cache, returning the path to
+    the unpacked <code>processors/&lt;part&gt;/&lt;variant&gt;/</code> directory.
+  </p>
+  <h3>Rationale</h3>
+  <p>
+    This is the primary library entry point. It is idempotent: if the target
+    directory already exists and is non-empty, fetch returns immediately
+    without hitting the network. Pass <code>force=True</code> to refetch.
+  </p>
+  <h3>Working definition</h3>
+  <p>
+    "Give me <code>part</code>'s SDK data on disk." The function selects the
+    right upstream tool version automatically (portfolio-latest) so callers
+    rarely need to specify <code>version</code>.
+  </p>
+  <h3>Tests</h3>
+  <ul>
+    <li>idempotency (second call without <code>force</code> is a no-op);</li>
+    <li>path-traversal rejection in <code>extract_processor_zip</code>;</li>
+    <li>variant default is <code>ksdk2_0</code> (ADR-0008).</li>
+  </ul>
+</section>
+
+<section data-interface="fetch_all" data-test-file="tests/L3_public_workflows/test_fetch.py" data-test-target="fetch_all">
+  <h2>fetch_all</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Fetch every part in the portfolio, optionally restricted to a family
+    prefix. Continues past per-part errors and returns the list of
+    successfully fetched paths.
+  </p>
+  <h3>Rationale</h3>
+  <p>
+    Bulk acquisition for index builds and offline analysis. Errors on a
+    single family must not abort the run because the API occasionally
+    returns 500-class responses for individual families.
+  </p>
+</section>
+</body>
+</html>

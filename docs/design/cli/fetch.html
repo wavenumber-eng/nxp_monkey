@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey fetch</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey fetch</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / fetch</div>
+</header>
+
+<section data-command="fetch" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Download and unpack NXP MCUXpresso Config Tools data for one or more
+    parts into the local cache and mirror the result into a working
+    directory tree split by media type. This is the primary data-acquisition
+    entry point for both human users and LLM/agent workflows.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey fetch PART [PART ...] [--variant VARIANT] [--version VERSION]
+                  [--force] [--output DIR]
+                  [--no-json-mirror]
+                  [--json-mirror-only PATTERN] [--json-mirror-skip PATTERN]
+nxp-monkey fetch --family PREFIX [...same flags...]
+nxp-monkey fetch --all              [...same flags...]</code></pre>
+
+  <h2>Selection</h2>
+  <table>
+    <tr><th>Form</th><th>Effect</th></tr>
+    <tr><td>positional PARTs</td><td>Fetch each named part.</td></tr>
+    <tr><td>--family PREFIX</td><td>Fetch every part whose name starts with PREFIX.</td></tr>
+    <tr><td>--all</td><td>Fetch every part in the portfolio.</td></tr>
+  </table>
+
+  <h2>Variant handling</h2>
+  <p>
+    By default, <code>fetch</code> pulls every SDK variant NXP publishes
+    for the part (<code>ksdk2_0</code> + <code>zephyr3_2</code> +
+    <code>i_mx_2_0</code>). The theme is "grab everything; the agent sorts
+    it out." Variants the part does not publish are silently skipped. Use
+    <code>--variant VARIANT</code> to restrict to a single SDK variant;
+    doing so makes a missing variant an error rather than a skip.
+    <code>ksdk2_0</code> remains the canonical silicon-data variant per
+    ADR-0008 — the all-variants default supplements it with Zephyr DT
+    codegen scripts and i.MX Linux binders.
+  </p>
+
+  <h2>Output layout</h2>
+  <p>
+    The platformdirs cache is always populated. In addition, each fetched
+    part is mirrored into <code>DIR/&lt;PART&gt;/</code> under
+    <code>--output</code> (cwd when absent), split by media type so an
+    agent can consume either side without an XML parser:
+  </p>
+  <pre><code>DIR/&lt;PART&gt;/
+  xml/                              # raw NXP binders, one subdir per SDK variant
+    ksdk2_0/...                     #   canonical silicon data (registers, pins, clocks)
+    zephyr3_2/...                   #   Zephyr DT codegen scripts
+    i_mx_2_0/...                    #   i.MX Linux binder (when published)
+  json/
+    &lt;PART&gt;.json                    # PartDetails spine: header, cores, packages, db_links
+    &lt;PART&gt;.roadmap.json            # agent guide + inferred schema + folder layout
+    ksdk2_0/...                     # full lossless XML-&gt;JSON mirror (one .json per .xml)
+    zephyr3_2/...
+    i_mx_2_0/...</code></pre>
+  <p>
+    Existing destination trees are replaced. The JSON sidecars
+    (<code>&lt;PART&gt;.json</code>, <code>&lt;PART&gt;.roadmap.json</code>) and the
+    XML&nbsp;-&gt;&nbsp;JSON mirror are always written; they are independent of the
+    global <code>--json</code> flag. The roadmap describes the layout, key
+    file pointers per variant, and the observed XML namespaces.
+  </p>
+
+  <h2>XML -&gt; JSON mirror</h2>
+  <p>
+    For each fetched variant, <code>fetch</code> walks the XML tree and
+    writes a parallel <code>.json</code> tree under
+    <code>DIR/&lt;PART&gt;/json/&lt;VARIANT&gt;/</code>. The conversion is lossless for
+    data: tags are namespace-stripped, attributes are <code>@attr</code>
+    keys, mixed text uses <code>#text</code>, repeated children become
+    lists, and the source <code>xmlns</code> map is preserved on the root
+    as <code>@_xmlns</code>. See <code>nxp_monkey/xml_json.py</code>.
+  </p>
+  <table>
+    <tr><th>Flag</th><th>Effect</th></tr>
+    <tr><td><code>--no-json-mirror</code></td><td>Skip the per-file XML-&gt;JSON conversion. The spine and roadmap are still written.</td></tr>
+    <tr><td><code>--json-mirror-only PATTERN</code></td><td>Only convert files whose variant-relative path matches PATTERN (fnmatch glob). Repeatable.</td></tr>
+    <tr><td><code>--json-mirror-skip PATTERN</code></td><td>Skip files matching PATTERN. Repeatable. Applied after <code>--json-mirror-only</code>.</td></tr>
+  </table>
+
+  <h2>Stdout / stderr</h2>
+  <p>
+    <strong>Stdout</strong> is one absolute path per line: the mirrored
+    <code>DIR/&lt;PART&gt;/</code> directory for each part fetched. Stays clean
+    for pipeline use.
+  </p>
+  <p>
+    <strong>Stderr</strong> carries two rich progress views: a
+    transferred-bytes bar with one row per (part, variant) while ZIPs are
+    streamed from NXP, then a per-(part, variant) bar with an
+    <code>M of N</code> column while the XML-&gt;JSON mirror is written.
+    Redirect <code>2&gt;/dev/null</code> if undesired. Programmatic callers
+    should prefer the library API and pass <code>progress_callback=</code> to
+    <code>fetch()</code> / <code>mirror_xml_tree_as_json()</code>.
+  </p>
+
+  <h2>--json invocation summary</h2>
+  <p>
+    With the global <code>--json</code> flag, <code>fetch</code> additionally
+    writes a <code>fetch.json</code> file in <code>DIR</code> summarising the
+    invocation (parts, variants, version, per-part mirror paths, mirror
+    file counts) and prints that path on stdout instead of the per-part
+    directories. JSON sidecars and the mirror are written either way.
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code># Library fetch operates on a single (part, variant) at a time and
+# returns the unpacked processors tree path.
+from nxp_monkey import fetch, DEFAULT_SDK_VARIANTS, NxpFetchError
+for variant in DEFAULT_SDK_VARIANTS:
+    try:
+        fetch("MCXA156", variant=variant)
+    except NxpFetchError:
+        pass  # Part may not publish every variant.
+
+# JSON spine + roadmap + mirror are exposed separately:
+from nxp_monkey import details, build_roadmap
+from nxp_monkey.xml_json import mirror_xml_tree_as_json</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_fetch_cli.py</code></li>
+    <li><code>tests/L3_public_workflows/test_fetch.py</code></li>
+  </ul>
+
+  <h2>Related</h2>
+  <ul>
+    <li><a href="../../adrs/ADR-0006-cache-directory-contract.md">ADR-0006</a></li>
+    <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a></li>
+    <li><a href="../../adrs/ADR-0008-sdk-variant-policy.md">ADR-0008</a></li>
+    <li><a href="roadmap.html">cli/roadmap.html</a></li>
+    <li><a href="details.html">cli/details.html</a></li>
+  </ul>
+</section>
+</body>
+</html>

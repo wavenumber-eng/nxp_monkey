@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey roadmap</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey roadmap</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / roadmap</div>
+</header>
+
+<section data-command="roadmap" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Emit a per-part roadmap pointing an agent at where things live in
+    the unpacked KEX tree, plus the distinct XML namespaces observed
+    (the inferred schema, since NXP publishes no XSDs). Mirrors the
+    narrative in <code>docs/research/xml_survey.md</code>, but is
+    generated from the on-disk tree so it reflects the part at hand.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey roadmap PART [--variant VARIANT] [--version VERSION]</code></pre>
+
+  <h2>Behavior</h2>
+  <p>
+    Fetches <code>PART</code> on demand if the local cache is empty for
+    the requested SDK variant. Defaults to <code>ksdk2_0</code> per
+    ADR-0008. Resolves the tool version per ADR-0007 unless
+    <code>--version</code> is explicit.
+  </p>
+
+  <h2>Output</h2>
+  <p>
+    Text mode prints a short ordered <code>guide</code>, the
+    <code>key_files</code> map, which optional top-level sections are
+    present (<code>security/</code>, <code>dcdx/</code>,
+    <code>ddr/</code>, <code>mem_validation/</code>), per-package
+    variants, codegen entry points (including Zephyr DT scripts), and
+    every distinct <code>xmlns</code> URI observed in the tree.
+  </p>
+  <p>
+    JSON mode (<code>--json</code>) writes
+    <code>&lt;PART&gt;.roadmap.json</code> in the working directory and
+    prints the path on stdout. The same payload is also always written
+    by <code>nxp-monkey fetch</code> alongside the mirrored tree at
+    <code>&lt;output&gt;/&lt;PART&gt;/json/&lt;PART&gt;.roadmap.json</code>
+    (independent of the global <code>--json</code> flag).
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code>nxp_monkey.build_roadmap(part_root)</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_cli_smoke.py</code></li>
+    <li><code>tests/L3_public_workflows/test_roadmap.py</code></li>
+  </ul>
+
+  <h2>Related</h2>
+  <ul>
+    <li><a href="../api/roadmap.html">API: build_roadmap</a></li>
+    <li><a href="details.html">CLI: details</a></li>
+    <li><a href="fetch.html">CLI: fetch</a></li>
+    <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a></li>
+    <li><a href="../../adrs/ADR-0008-sdk-variant-policy.md">ADR-0008</a></li>
+  </ul>
+</section>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey details</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey details</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / details</div>
+</header>
+
+<section data-command="details" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Print a structured view of one part's KEX data tree: top-level
+    processor header, CPU cores, per-package variants, and a manifest of
+    typed file links inside each variant. The heavier payloads
+    (per-peripheral registers, pin-mux model, clock tree) are reachable
+    through the printed paths but are not eagerly parsed; see
+    <a href="../api/details.html">details() API</a> and
+    <code>docs/research/xml_survey.md</code>.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey details PART [--variant VARIANT] [--version VERSION]</code></pre>
+
+  <h2>Behavior</h2>
+  <p>
+    Fetches <code>PART</code> on demand if the local cache is empty for
+    the requested SDK variant. Defaults to <code>ksdk2_0</code> per
+    ADR-0008. Resolves the tool version per ADR-0007 unless
+    <code>--version</code> is explicit.
+  </p>
+
+  <h2>Output</h2>
+  <p>
+    Plain text with one labelled field per line, followed by a list of
+    cores, properties and per-package variants. Use the library API for
+    a programmatic shape.
+  </p>
+
+  <h2>--json mode</h2>
+  <p>
+    With the global <code>--json</code> flag, <code>details</code> writes
+    <code>&lt;PART&gt;.json</code> to the working directory (the same spine
+    that <code>fetch</code> writes inside <code>DIR/&lt;PART&gt;/json/</code>)
+    and prints that path on stdout instead of the labelled text view.
+  </p>
+
+  <h2>Library equivalent</h2>
+  <pre><code>nxp_monkey.details("MCXA132")
+nxp_monkey.details("MCXA132", variant="ksdk2_0", version="26.03")</code></pre>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_cli_smoke.py</code></li>
+    <li><code>tests/L3_public_workflows/test_details.py</code></li>
+  </ul>
+
+  <h2>Related</h2>
+  <ul>
+    <li><a href="../../adrs/ADR-0006-cache-directory-contract.md">ADR-0006</a></li>
+    <li><a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a></li>
+    <li><a href="../../adrs/ADR-0008-sdk-variant-policy.md">ADR-0008</a></li>
+  </ul>
+</section>
+</body>
+</html>

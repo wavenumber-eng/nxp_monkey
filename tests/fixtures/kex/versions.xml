@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tool>
+  <tool_version>
+    <api_id>1</api_id>
+    <name>24.12.0</name>
+    <version>24.12.0</version>
+  </tool_version>
+  <tool_version>
+    <api_id>2</api_id>
+    <name>25.6.0</name>
+    <version>25.6.0</version>
+  </tool_version>
+  <tool_version>
+    <api_id>3</api_id>
+    <name>25.12.10</name>
+    <version>25.12.10</version>
+  </tool_version>
+  <tool_version>
+    <api_id>4</api_id>
+    <name>26.3.0</name>
+    <version></version>
+  </tool_version>
+</tool>

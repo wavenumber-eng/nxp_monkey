@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.index</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.index</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / index</div>
+</header>
+
+<section data-interface="build_index" data-test-file="tests/L3_public_workflows/test_index.py" data-test-target="build_index">
+  <h2>build_index</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Build or refresh the local SQLite + FTS5 index from the KEX portfolio
+    map. Returns an <code>IndexMeta</code> describing the build.
+  </p>
+  <h3>Rationale</h3>
+  <p>
+    The index is what makes <code>search</code> fast and offline. It is
+    rebuilt explicitly (never implicitly) so the cost is visible to the user
+    and reproducible for tests.
+  </p>
+  <h3>probe_variants flag</h3>
+  <p>
+    By default the index records the assumed default variant set without
+    hitting upstream per family. With <code>probe_variants=True</code>, each
+    family is probed and only present variants are recorded. The probed
+    mode is accurate but costs roughly one extra request per family.
+  </p>
+</section>
+
+<section data-interface="get_part" data-test-file="tests/L3_public_workflows/test_index.py" data-test-target="get_part">
+  <h2>get_part</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Look up one part by name (case-insensitive). Returns <code>None</code>
+    when the part is not present or the index has not been built.
+  </p>
+</section>
+
+<section data-interface="open_index" data-test-file="tests/L3_public_workflows/test_index.py" data-test-target="open_index">
+  <h2>open_index</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Open a connection to the index SQLite database. Defaults to read-only.
+    Provided for downstream tools and tests that need to walk the schema
+    directly.
+  </p>
+</section>
+
+<section data-interface="index_meta" data-test-file="tests/L3_public_workflows/test_index.py" data-test-target="index_meta">
+  <h2>index_meta</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Return the metadata sidecar describing the most recent index build, or
+    <code>None</code> when no index exists.
+  </p>
+</section>
+</body>
+</html>

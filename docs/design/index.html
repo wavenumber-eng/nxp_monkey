@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey design docs</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-doc="design-index">
+<header>
+  <h1>nxp_monkey — design documentation</h1>
+  <div class="crumbs">docs / design / index.html</div>
+</header>
+
+<section>
+  <h2>About</h2>
+  <p>
+    <code>nxp_monkey</code> is a public CLI and Python library that wraps NXP's
+    MCUXpresso Config Tools KEX storage API. This directory holds the
+    machine-readable design documentation required for release signoff
+    (see <a href="../adrs/ADR-0005-design-doc-and-test-ownership-signoff.md">ADR-0005</a>).
+  </p>
+  <p>
+    Every public CLI command has a doc under <code>cli/</code> with a
+    <code>data-command</code> attribute. Every public Python interface has a
+    doc under <code>api/</code> with a <code>data-interface</code> attribute.
+    <code>L99_signoff</code> verifies these are present and synchronized with
+    <code>docs/contracts/</code>.
+  </p>
+</section>
+
+<section>
+  <h2>CLI commands</h2>
+  <table>
+    <tr><th>Command</th><th>Design doc</th><th>Summary</th></tr>
+    <tr><td>versions</td><td><a href="cli/versions.html">cli/versions.html</a></td><td>List MCUXpresso tool versions</td></tr>
+    <tr><td>families</td><td><a href="cli/families.html">cli/families.html</a></td><td>List processor families</td></tr>
+    <tr><td>search</td><td><a href="cli/search.html">cli/search.html</a></td><td>Search the local index</td></tr>
+    <tr><td>index</td><td><a href="cli/index.html">cli/index.html</a></td><td>Build / inspect the local index</td></tr>
+    <tr><td>fetch</td><td><a href="cli/fetch.html">cli/fetch.html</a></td><td>Fetch parts into the local cache (XML + JSON output)</td></tr>
+    <tr><td>details</td><td><a href="cli/details.html">cli/details.html</a></td><td>Print the parsed chip-data spine for one part</td></tr>
+    <tr><td>roadmap</td><td><a href="cli/roadmap.html">cli/roadmap.html</a></td><td>Print the per-part agent roadmap (layout + schema)</td></tr>
+    <tr><td>cache</td><td><a href="cli/cache.html">cli/cache.html</a></td><td>Inspect / manage the cache</td></tr>
+    <tr><td>help</td><td><a href="cli/help.html">cli/help.html</a></td><td>Help alias</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Public Python API</h2>
+  <table>
+    <tr><th>Module</th><th>Design doc</th><th>Symbols</th></tr>
+    <tr><td>nxp_monkey.models</td><td><a href="api/models.html">api/models.html</a></td><td>ApiVersion, StorageEntry, PartInfo, SearchHit, IndexMeta</td></tr>
+    <tr><td>nxp_monkey.kex_client</td><td><a href="api/kex_client.html">api/kex_client.html</a></td><td>KexClient, NxpFetchError, list_versions, latest_version, list_families, portfolio_latest_map</td></tr>
+    <tr><td>nxp_monkey.fetch</td><td><a href="api/fetch.html">api/fetch.html</a></td><td>fetch, fetch_all</td></tr>
+    <tr><td>nxp_monkey.details</td><td><a href="api/details.html">api/details.html</a></td><td>details</td></tr>
+    <tr><td>nxp_monkey.roadmap</td><td><a href="api/roadmap.html">api/roadmap.html</a></td><td>build_roadmap</td></tr>
+    <tr><td>nxp_monkey.search</td><td><a href="api/search.html">api/search.html</a></td><td>search, part_variants</td></tr>
+    <tr><td>nxp_monkey.index</td><td><a href="api/index.html">api/index.html</a></td><td>build_index, get_part, open_index, index_meta</td></tr>
+    <tr><td>nxp_monkey.cache</td><td><a href="api/cache.html">api/cache.html</a></td><td>cache_path, cache_size, cache_clear</td></tr>
+    <tr><td>nxp_monkey.xml_json</td><td><a href="api/xml_json.html">api/xml_json.html</a></td><td>xml_file_to_dict, mirror_xml_tree_as_json</td></tr>
+  </table>
+</section>
+
+<footer>
+  nxp_monkey design index — see <code>docs/contracts/</code> for machine-readable manifests.
+</footer>
+</body>
+</html>

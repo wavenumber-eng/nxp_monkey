@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<part:part_number xmlns:part="http://swtools.freescale.net/XSD/part_number/4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://swtools.freescale.net/XSD/part_number/4.0 http://swtools.freescale.net/XSD/part_number/4.0/part_number.xsd" id="MCXSAMPLE_QFN32">
+  <db_link type="part_info" link="MCXSAMPLE_QFN32/part_info.xml" format_version="1.0" description="Part info"/>
+  <db_link type="package" link="packages/QFN32.xml" format_version="1.0" description="QFN32 package"/>
+  <db_link type="cores_info" link="common/cores_info.xml" format_version="1.0" description="Cores"/>
+</part:part_number>

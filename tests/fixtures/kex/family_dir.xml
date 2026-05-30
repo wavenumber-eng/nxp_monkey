@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dir>
+  <entry>
+    <file_id>v1</file_id>
+    <full_path>/kex_tools/processors/MCXA156/ksdk2_0</full_path>
+    <directory>true</directory>
+    <time>1700000000</time>
+    <size></size>
+    <compression></compression>
+  </entry>
+  <entry>
+    <file_id>v2</file_id>
+    <full_path>/kex_tools/processors/MCXA156/zephyr3_2</full_path>
+    <directory>true</directory>
+    <time>1700000000</time>
+    <size></size>
+    <compression></compression>
+  </entry>
+</dir>
