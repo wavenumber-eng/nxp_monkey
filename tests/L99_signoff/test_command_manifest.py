@@ -22,10 +22,8 @@ def _live_subcommands() -> set[str]:
     parser = build_parser()
     names: set[str] = set()
     for action in parser._actions:
-        if isinstance(action, type(parser._subparsers).__class__):
-            continue
         choices = getattr(action, "choices", None)
-        if choices and isinstance(choices, dict):
+        if isinstance(choices, dict):
             names.update(choices.keys())
     return names
 

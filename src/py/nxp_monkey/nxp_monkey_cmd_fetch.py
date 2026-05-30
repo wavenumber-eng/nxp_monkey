@@ -18,6 +18,7 @@ from rich.progress import (
     MofNCompleteColumn,
     Progress,
     SpinnerColumn,
+    TaskID,
     TextColumn,
     TimeElapsedColumn,
     TransferSpeedColumn,
@@ -407,7 +408,7 @@ def _make_mirror_cb(progress: Progress, part: str, variant: str):
     First call adds a rich task sized to the file total; subsequent
     calls advance it.
     """
-    task_id: list[int | None] = [None]
+    task_id: list[TaskID | None] = [None]
     label = f"{part}/{variant} -> JSON"
 
     def update(done: int, total: int, rel: str) -> None:
@@ -549,7 +550,7 @@ def _make_progress_cb(progress: Progress, part: str, variant: str):
     Returns a callable matching :data:`nxp_monkey.kex_client.ProgressCallback`:
     on the first call it adds a rich task, subsequent calls advance it.
     """
-    task_id: list[int | None] = [None]
+    task_id: list[TaskID | None] = [None]
 
     def update(bytes_so_far: int, total: int | None) -> None:
         if task_id[0] is None:
