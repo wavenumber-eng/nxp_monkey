@@ -1,0 +1,17 @@
+# Normalize all text files to LF on commit and in the working tree.
+# Avoids CRLF noise on Windows clones; matches Linux/macOS contributors.
+* text=auto eol=lf
+
+# Explicit binary types
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.xz    binary
+
+# Generated lockfile — exclude from GitHub language stats and diffs
+uv.lock linguist-generated=true

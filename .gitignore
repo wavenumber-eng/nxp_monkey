@@ -26,3 +26,11 @@ Thumbs.db
 
 # Local data
 /scratch/
+
+# CLI --json output that lands in cwd during dev
+/fetch.json
+/families.json
+/versions.json
+/search.json
+/index.json
+/cache.json
