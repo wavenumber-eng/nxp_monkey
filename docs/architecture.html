@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NXP Monkey Architecture</title>
+</head>
+<body data-doc="architecture" data-profile="python-package">
+  <h1>Architecture</h1>
+  <p>
+    NXP Monkey is a library-first Python package and CLI for NXP MCUXpresso
+    Config Tools KEX data. It discovers published tool versions and processor
+    families, builds a local index, fetches part data trees, mirrors XML to
+    JSON, and exposes a stable local cache for humans, scripts, and agents.
+  </p>
+
+  <h2>Layers</h2>
+  <ul>
+    <li><code>kex_client.py</code>: public KEX storage API transport.</li>
+    <li><code>models.py</code>: dataclass records for versions, parts, details, and index rows.</li>
+    <li><code>fetch.py</code>, <code>details.py</code>, <code>roadmap.py</code>, <code>xml_json.py</code>: data acquisition and parsing.</li>
+    <li><code>index.py</code> and <code>search.py</code>: local SQLite/FTS index behavior.</li>
+    <li><code>nxp_monkey_cmd_*.py</code>: thin CLI command wrappers.</li>
+    <li><code>docs/contracts/</code>: command, interface, and exception manifests.</li>
+  </ul>
+
+  <h2>Boundaries</h2>
+  <p>
+    The package fetches public NXP data on behalf of the user and keeps NXP
+    source XML semantics intact. Downstream code generation, board-specific
+    policy, and proprietary SDK handling belong outside this package. Public
+    CLI commands and importable interfaces require matching design docs,
+    contract manifests, and Rack-owned tests before release.
+  </p>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NXP Monkey Setup</title>
+</head>
+<body data-doc="setup" data-profile="python-package">
+  <h1>Setup</h1>
+  <p>NXP Monkey uses uv, Hatchling, Rack, pytest, ruff, pyright, build, and twine.</p>
+
+  <h2>Required Tools</h2>
+  <ul>
+    <li>Python 3.12</li>
+    <li>uv</li>
+    <li>Git</li>
+  </ul>
+
+  <h2>Development Commands</h2>
+  <pre><code>uv sync --all-extras
+uv run nxp-monkey --version
+uv run nxp-monkey version
+uv run rack run --all
+uv run python -m build
+uv run twine check dist/*
+uv run python tests/support_scripts/install_test.py</code></pre>
+
+  <h2>Release</h2>
+  <p>
+    Release publication validates the package and publishes through PyPI
+    trusted publishing. Do not use local PyPI tokens for the normal release
+    path.
+  </p>
+
+  <h2>Binary Distribution Policy</h2>
+  <p>
+    This release is pure Python. Future native, CLI-bundle, or WebAssembly
+    artifacts should be separated by platform and architecture using
+    directories such as <code>dist/native/windows-x64/</code>,
+    <code>dist/native/linux-x64/</code>, <code>dist/native/macos-arm64/</code>,
+    and <code>dist/wasm/browser/</code>.
+  </p>
+</body>
+</html>

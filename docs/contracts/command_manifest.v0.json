@@ -4,6 +4,12 @@
   "tool": "nxp-monkey",
   "commands": [
     {
+      "name": "version",
+      "design_doc": "docs/design/cli/version.html",
+      "config_contract": "none",
+      "summary": "Print package and major runtime dependency versions"
+    },
+    {
       "name": "versions",
       "design_doc": "docs/design/cli/versions.html",
       "config_contract": "none",

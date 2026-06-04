@@ -12,7 +12,8 @@
 
 ## Checklist
 
-- [ ] Tests pass locally (`uv run pytest`)
+- [ ] Rack signoff passes locally (`uv run rack run --all`)
+- [ ] Package build and installed-wheel smoke test pass locally
 - [ ] L99 signoff passes (no missing design docs, manifests in sync,
       docstrings present, contracts validate)
 - [ ] CHANGELOG.md updated under an `[Unreleased]` or release section

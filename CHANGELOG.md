@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and
 this project adheres to date-based PEP 440 versions per ADR-0001
 (`YYYY.M.D[.N]`).
 
+## [2026.6.4] - 2026-06-04
+
+### Added
+
+- Added `nxp-monkey version` / `nxpm version` with text and JSON output.
+- Added root project hygiene files: `AGENTS.md`, `CODE_OF_CONDUCT.md`, and
+  `SECURITY.md`.
+- Added setup, architecture, release-note, and standards-exception docs.
+- Added Rack strata and installed-wheel smoke testing to release signoff.
+
+### Changed
+
+- Updated CI and release workflows to native Node 24 GitHub Actions.
+- Moved the default signoff path from direct pytest invocation to
+  `uv run rack run --all`.
+- Updated the package baseline to Python 3.12 and `wn-rack>=2026.6.4`.
+
 ## [2026.5.29] - 2026-05-29
 
 ### Added

@@ -70,10 +70,12 @@ Initial dependencies (v0.1):
 | `platformdirs` | required | Cross-platform user cache directory (Windows `%LOCALAPPDATA%`, macOS `~/Library/Caches`, Linux `XDG_CACHE_HOME`). Stdlib has no equivalent. MIT licensed. |
 | `rich-argparse` | required | argparse formatter only; preserves stdlib parser tree for manifest introspection; correct `NO_COLOR` / TTY handling for free. MIT licensed. |
 | `pytest` | test-only | Test runner. |
+| `pytest-json-report` | test-only | Rack consumes pytest JSON reports for stratum summaries. |
 | `jsonschema` | test-only | Contract conformance tests in `L99_signoff`. |
 | `pyright` | test-only | Type checking. |
 | `ruff` | test-only | Lint + format. |
 | `build`, `twine` | test-only | Package build verification. |
+| `wn-rack` | test-only | Wavenumber stratum-based signoff runner for local and CI release gates. |
 
 ### License
 

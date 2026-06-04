@@ -100,10 +100,14 @@ def build_parser() -> argparse.ArgumentParser:
         nxp_monkey_cmd_search as cmd_search,
     )
     from . import (
+        nxp_monkey_cmd_version as cmd_version,
+    )
+    from . import (
         nxp_monkey_cmd_versions as cmd_versions,
     )
 
     for module in (
+        cmd_version,
         cmd_versions,
         cmd_families,
         cmd_search,

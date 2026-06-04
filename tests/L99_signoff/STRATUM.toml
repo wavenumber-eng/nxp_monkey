@@ -1,0 +1,92 @@
+name = "Release Signoff"
+order = 99
+description = "Final release signoff checks for metadata, docs, contracts, static analysis, and hygiene"
+enabled = true
+concerns = ["release", "signoff"]
+
+objectives = [
+    "Package version metadata matches the release contract",
+    "Changelog and release notes mention the release version",
+    "Ruff linting passes",
+    "Pyright type checking passes",
+    "Registered CLI commands have matching HTML design documentation",
+    "Public interfaces have design docs and docstrings",
+    "Python complexity, annotations, and Any usage do not regress",
+    "Machine-readable command/interface/exception contracts match source and docs",
+    "Repository hygiene files and release artifact exclusions are present",
+]
+
+[dependencies]
+strata = ["L0_public_cli", "L3_public_workflows"]
+
+[[subtests]]
+id = "L99_001"
+file = "test_release_metadata.py"
+name = "Release Metadata"
+description = "Validate version, changelog, release notes, and pyproject metadata"
+concerns = ["release"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_002"
+file = "test_static_checks.py"
+name = "Static Checks"
+description = "Run Ruff and Pyright"
+concerns = ["quality"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_003"
+file = "test_command_manifest.py"
+name = "Command Manifest"
+description = "Validate command manifest, design docs, and argparse wiring"
+concerns = ["docs", "contracts", "cli"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_004"
+file = "test_interface_manifest.py"
+name = "Interface Manifest"
+description = "Validate public interface manifest, design docs, and docstrings"
+concerns = ["docs", "contracts", "api"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_005"
+file = "test_docstrings.py"
+name = "Docstrings"
+description = "Validate public modules and symbols have docstrings"
+concerns = ["docs", "api"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_006"
+file = "test_cli_thinness.py"
+name = "CLI Thinness"
+description = "Validate CLI command modules remain thin wrappers"
+concerns = ["architecture", "cli"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_007"
+file = "test_python_signoff.py"
+name = "Python Signoff"
+description = "Validate Python complexity, annotation, function-size, and Any baselines"
+concerns = ["quality", "standards"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_008"
+file = "test_standards_exceptions.py"
+name = "Standards Exceptions"
+description = "Validate documented standards exceptions"
+concerns = ["standards", "docs"]
+test_case_type = "audit_meta"
+
+[[subtests]]
+id = "L99_009"
+file = "test_repo_hygiene.py"
+name = "Repository Hygiene"
+description = "Validate root hygiene files and release artifact exclusions"
+concerns = ["release", "signoff"]
+test_case_type = "audit_meta"

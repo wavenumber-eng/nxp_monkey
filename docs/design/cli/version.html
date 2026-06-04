@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey version</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey version</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / version</div>
+</header>
+
+<section data-command="version" data-config-contract="none">
+  <h2>Purpose</h2>
+  <p>
+    Print the installed <code>nxp-monkey</code> version, Python runtime, and
+    major runtime dependency versions. This is the first support command to
+    run when checking an installed tool or workspace setup.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey version
+nxp-monkey version --format json
+nxpm version</code></pre>
+
+  <h2>Output</h2>
+  <p>
+    Text mode prints one <code>name version</code> row per line. JSON mode
+    prints the same data as a single object for automation.
+  </p>
+
+  <h2>Side Effects</h2>
+  <p>
+    None. This command does not read or write the NXP cache.
+  </p>
+
+  <h2>Tests</h2>
+  <ul>
+    <li><code>tests/L0_public_cli/test_cli_smoke.py</code></li>
+    <li><code>tests/support_scripts/install_test.py</code></li>
+  </ul>
+</section>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "exceptions": [
+    {
+      "id": "NXP-PYRIGHT-STANDARD",
+      "rule": "pyright strict",
+      "scope": "pyproject.toml [tool.pyright]",
+      "rationale": "NXP Monkey already passes Pyright standard mode across source and tests. This release keeps behavior unchanged while the public KEX XML/JSON boundary types and fixture-heavy tests are reviewed before enabling strict mode.",
+      "review": "Move to strict mode after the data-boundary Any usage has explicit TypedDict or dataclass ownership."
+    },
+    {
+      "id": "NXP-RESEARCH-XML-SURVEY",
+      "rule": "research docs excluded from release artifacts",
+      "scope": "docs/research/xml_survey.md",
+      "rationale": "The XML survey is useful repository reference material for KEX file-format work, but this release keeps research documents out of the source distribution per ADR-0001.",
+      "review": "Promote durable file-format material into docs/canonical_format or docs/design before making it part of release artifacts."
+    },
+    {
+      "id": "NXP-LEGACY-SRC-PY",
+      "rule": "standard src/<package> layout",
+      "scope": "src/py/nxp_monkey",
+      "rationale": "The package already ships from src/py and downstream references use that layout. Moving it during a release-hardening pass would create avoidable churn.",
+      "review": "Consider migrating to src/nxp_monkey during a dedicated packaging cleanup release."
+    },
+    {
+      "id": "NXP-PY-SIGNOFF-RATCHET",
+      "rule": "strict complexity, annotation, and Any usage limits",
+      "scope": "tests/support_scripts/py_signoff_baseline.json",
+      "rationale": "Several KEX parser, fetch, and CLI wrapper functions predate the standards repo. This release records the current baseline and blocks growth in complexity, function size, missing annotations, and Any usage.",
+      "review": "Refactor baseline offenders down over time. Baseline updates should reduce counts or include explicit release-note rationale."
+    }
+  ]
+}

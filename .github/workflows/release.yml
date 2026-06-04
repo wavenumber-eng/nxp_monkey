@@ -1,13 +1,11 @@
-name: release
+name: Publish
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   publish:
-    name: build + publish to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -17,18 +15,13 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install package and test deps
-        run: uv sync --all-extras
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          python-version: "3.12"
 
       - name: Verify tag matches package version
+        shell: bash
         run: |
           PKG_VERSION=$(uv run python -c "import nxp_monkey; print(nxp_monkey.__version__)")
           TAG_VERSION=${GITHUB_REF_NAME#v}
@@ -37,14 +30,29 @@ jobs:
             exit 1
           fi
 
+      - name: Verify release notes mention package version
+        shell: bash
+        run: |
+          VERSION="$(uv run python -c 'import nxp_monkey; print(nxp_monkey.__version__)')"
+          RELEASE_DATE="$(uv run python -c 'import nxp_monkey; y,m,d,*_=map(int,nxp_monkey.__version__.split(".")); print(f"{y:04d}-{m:02d}-{d:02d}")')"
+          grep -F "## [${VERSION}]" CHANGELOG.md
+          test -f "docs/releases/${RELEASE_DATE}.md"
+          grep -F "\`${VERSION}\`" "docs/releases/${RELEASE_DATE}.md"
+
+      - name: Install package and test deps
+        run: uv sync --all-extras
+
       - name: Tests + signoff
-        run: uv run pytest -v
+        run: uv run rack run --all
 
       - name: Build sdist + wheel
         run: uv run python -m build
 
       - name: twine check
         run: uv run twine check dist/*
+
+      - name: Run installed import test
+        run: uv run python tests/support_scripts/install_test.py
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

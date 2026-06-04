@@ -1,0 +1,86 @@
+name = "Public Workflows"
+order = 3
+description = "Offline fixture-backed public library and workflow tests"
+enabled = true
+concerns = ["library", "workflow", "fixtures"]
+
+objectives = [
+    "Validate KEX client parsing against saved fixtures",
+    "Validate index, search, fetch, details, roadmap, cache, and XML/JSON workflows",
+    "Keep public library behavior stable without requiring network access",
+]
+
+[dependencies]
+strata = ["L0_public_cli"]
+
+[[subtests]]
+id = "L3_001"
+file = "test_kex_client.py"
+name = "KEX Client"
+description = "Exercise version and family discovery against fixtures"
+concerns = ["api", "fixtures"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_002"
+file = "test_index.py"
+name = "Index"
+description = "Build and inspect the local index from fixtures"
+concerns = ["index"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_003"
+file = "test_search.py"
+name = "Search"
+description = "Search the local index"
+concerns = ["search"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_004"
+file = "test_fetch.py"
+name = "Fetch"
+description = "Fetch and mirror part data from fixtures"
+concerns = ["fetch", "cache"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_005"
+file = "test_details.py"
+name = "Details"
+description = "Parse part details from the local cache"
+concerns = ["parser"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_006"
+file = "test_roadmap.py"
+name = "Roadmap"
+description = "Build per-part roadmap outputs"
+concerns = ["parser", "docs"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_007"
+file = "test_cache.py"
+name = "Cache"
+description = "Validate cache path, size, and clear behavior"
+concerns = ["cache"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_008"
+file = "test_xml_json.py"
+name = "XML JSON"
+description = "Validate XML to JSON conversion behavior"
+concerns = ["parser", "serialization"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_009"
+file = "test_models.py"
+name = "Models"
+description = "Validate public dataclass model behavior"
+concerns = ["api"]
+test_case_type = "workflow"

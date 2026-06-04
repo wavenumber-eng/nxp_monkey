@@ -1,0 +1,26 @@
+{
+  "annotation_missing_offenders": [
+    "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::_make_mirror_cb:return",
+    "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::_make_progress_cb:return",
+    "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::make_cb:return"
+  ],
+  "any_count_total": 4,
+  "complexity_offenders": {
+    "src/py/nxp_monkey/kex_client.py::download_directory_zip": 13,
+    "src/py/nxp_monkey/kex_client.py::portfolio_latest_map": 12,
+    "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::run": 13,
+    "src/py/nxp_monkey/nxp_monkey_cmd_roadmap.py::run": 15,
+    "src/py/nxp_monkey/readers.py::read_processor_header": 12,
+    "src/py/nxp_monkey/roadmap.py::_collect_namespaces": 11,
+    "src/py/nxp_monkey/search.py::search": 15,
+    "src/py/nxp_monkey/xml_json.py::mirror_xml_tree_as_json": 13
+  },
+  "function_line_offenders": {
+    "src/py/nxp_monkey/_cli.py::build_parser": 96,
+    "src/py/nxp_monkey/index.py::build_index": 93,
+    "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::register": 122
+  },
+  "max_function_lines": 80,
+  "max_new_code_complexity": 10,
+  "schema": 1
+}

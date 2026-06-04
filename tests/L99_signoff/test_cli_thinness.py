@@ -15,7 +15,9 @@ PACKAGE_ROOT = pathlib.Path(__file__).resolve().parents[2] / "src" / "py" / "nxp
 
 ALLOWED_TOP_LEVEL = {
     "argparse",
+    "importlib",
     "json",
+    "platform",
     "re",
     "sys",
     "os",

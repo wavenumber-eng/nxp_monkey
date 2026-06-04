@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NXP Monkey Standards Exceptions",
+  "type": "object",
+  "required": ["exceptions"],
+  "properties": {
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "rule", "scope", "rationale", "review"],
+        "properties": {
+          "id": { "type": "string" },
+          "rule": { "type": "string" },
+          "scope": { "type": "string" },
+          "rationale": { "type": "string" },
+          "review": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
