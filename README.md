@@ -35,8 +35,10 @@ agents can all consume.
 uv tool install nxp-monkey
 uv tool update-shell
 nxp-monkey --version
+nxp-monkey version
 # Short alias is also installed:
 nxpm --version
+nxpm version
 ```
 
 ## CLI quick start (MCXA156)
@@ -145,11 +147,25 @@ nxp_monkey.cache_clear()
 
 ## Documentation
 
+- `docs/setup.html` - setup, release, and artifact policy.
+- `docs/architecture.html` - package layers and ownership boundaries.
 - `docs/adrs/` — architecture decision records.
 - `docs/design/cli/` — one HTML doc per CLI command.
 - `docs/design/api/` — one HTML doc per public library interface.
 - `docs/contracts/` — JSON manifests + schemas (command + interface).
 - `docs/research/xml_survey.md` — narrative survey of the KEX XML schema universe.
+
+## Testing
+
+Rack is the primary local signoff gate:
+
+```powershell
+uv sync --all-extras
+uv run rack run --all
+uv run python -m build
+uv run twine check dist/*
+uv run python tests/support_scripts/install_test.py
+```
 
 ## License
 

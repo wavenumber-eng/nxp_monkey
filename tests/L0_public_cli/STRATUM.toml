@@ -1,0 +1,27 @@
+name = "Public CLI"
+order = 0
+description = "Fast public command-line smoke tests"
+enabled = true
+concerns = ["cli", "public-api"]
+
+objectives = [
+    "Verify package version commands work",
+    "Verify public subcommands expose help",
+    "Verify the help alias dispatches",
+]
+
+[[subtests]]
+id = "L0_001"
+file = "test_cli_smoke.py"
+name = "CLI Smoke"
+description = "Run the public CLI entry point without network access"
+concerns = ["cli"]
+test_case_type = "smoke"
+
+[subtests.objectives]
+entrypoint = "python -m nxp_monkey works"
+help = "Every public command accepts --help"
+version = "Version commands report package and dependency versions"
+
+[subtests.approach]
+pytest = "Invoke the CLI as a subprocess against local code"

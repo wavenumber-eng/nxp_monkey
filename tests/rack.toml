@@ -1,0 +1,59 @@
+[rack]
+name = "NXP Monkey Public Tests"
+version = "1.0"
+description = "Rack suite for NXP KEX CLI, library workflows, and release signoff"
+default_lane = "fast"
+
+[strata]
+order = [
+    "L0_public_cli",
+    "L3_public_workflows",
+    "L99_signoff",
+]
+default_enabled = [
+    "L0_public_cli",
+    "L3_public_workflows",
+    "L99_signoff",
+]
+
+[concerns.cli]
+description = "Public command-line interface behavior"
+
+[concerns.library]
+description = "Public Python library behavior"
+
+[concerns.workflow]
+description = "Offline fixture-backed user workflows"
+
+[concerns.docs]
+description = "Human-readable and machine-checkable documentation"
+
+[concerns.contracts]
+description = "Machine-readable public contracts"
+
+[concerns.quality]
+description = "Ruff, Pyright, and AST-based Python hygiene"
+
+[concerns.release]
+description = "Release metadata, packaging, and publishing readiness"
+
+[concerns.signoff]
+description = "Final release quality gates"
+
+[lanes.fast]
+description = "Default fast lane for routine development"
+
+[lanes.full]
+description = "Full local package validation lane"
+
+[lanes.strict]
+description = "Release signoff lane"
+
+[dependencies]
+python_packages = [
+    "pytest",
+    "pytest-json-report",
+    "pyright",
+    "ruff",
+    "wn-rack",
+]

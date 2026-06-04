@@ -17,9 +17,8 @@ non-trivial PR, please read at minimum:
 ```powershell
 git clone https://github.com/wavenumber-eng/nxp_monkey C:\eli\nxp_monkey
 cd C:\eli\nxp_monkey
-uv venv
-uv pip install -e ".[test]"
-uv run pytest
+uv sync --all-extras
+uv run rack run --all
 ```
 
 For local CLI testing as an installed tool:
@@ -38,8 +37,8 @@ Tests are stratified per ADR-0003:
   fixtures.
 - `tests/L99_signoff/` — structural / conformance tests.
 
-The default `pytest` invocation runs L0 + L3 + L99 and is the gate for
-commits and PRs. Network tests are opt-in:
+The default Rack invocation runs L0 + L3 + L99 and is the gate for commits and
+PRs. Network tests are opt-in:
 
 ```powershell
 uv run pytest -m network

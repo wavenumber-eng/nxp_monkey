@@ -18,7 +18,7 @@ and a repeatable automation path that matches the sibling packages.
 - normal release: `YYYY.M.D`
 - supplemental build release: `YYYY.M.D.N`
 
-The Git tag for a release is `v<version>`, for example `v2026.5.29`.
+The Git tag for a release is `v<version>`, for example `v2026.6.4`.
 
 The release source is the standalone public repository
 `github.com/wavenumber-eng/nxp_monkey`. There is no generated public-export flow.
@@ -26,8 +26,7 @@ The release source is the standalone public repository
 The normal publishing path is GitHub Actions with PyPI Trusted Publishing / OIDC:
 
 1. merge to protected `main` after CI passes;
-2. create an annotated `v<version>` tag or GitHub Release from the release
-   commit;
+2. create a GitHub Release named `v<version>` from the release commit;
 3. release workflow verifies package version metadata matches the tag;
 4. release workflow verifies release notes mention the version;
 5. release workflow runs tests, signoff, package build, install tests, and

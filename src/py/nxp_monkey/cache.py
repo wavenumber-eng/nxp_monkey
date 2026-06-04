@@ -20,6 +20,7 @@ Submodule paths used by other internal modules:
 from __future__ import annotations
 
 import shutil
+from contextlib import suppress
 from pathlib import Path
 
 from platformdirs import user_cache_dir
@@ -127,7 +128,5 @@ def _remove(path: Path) -> None:
     if path.is_dir():
         shutil.rmtree(path, ignore_errors=True)
     elif path.exists():
-        try:
+        with suppress(OSError):
             path.unlink()
-        except OSError:
-            pass
