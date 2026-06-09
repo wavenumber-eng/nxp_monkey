@@ -50,7 +50,8 @@ nxp-monkey versions
 # What processor families are available?
 nxp-monkey families
 
-# Search by part / family root (partial + fuzzy)
+# Search by part / family root. Uses the index when present and falls
+# back to the portfolio map when it is not.
 nxp-monkey search MCXA
 nxp-monkey search mcxa --fuzzy
 
@@ -61,6 +62,9 @@ nxp-monkey index show MCXA156
 # Fetch one part. Downloads every SDK variant NXP publishes,
 # mirrors the XML, and writes the JSON views alongside.
 nxp-monkey fetch MCXA156
+
+# Prefixes and concrete orderable aliases are accepted too.
+nxp-monkey fetch MIMX93 --variant ksdk2_0
 
 # Print the parsed chip-data spine (header, cores, package variants)
 nxp-monkey details MCXA156
@@ -129,13 +133,14 @@ families = nxp_monkey.list_families()
 
 # Search
 hits = nxp_monkey.search("MCXA", fuzzy=False)
+imx_hits = nxp_monkey.search("MIMX9352CVVXMAB")
 
 # Index
 nxp_monkey.build_index()
 info = nxp_monkey.get_part("MCXA156")     # -> PartInfo dataclass
 
 # Fetch + parse
-path = nxp_monkey.fetch("MCXA156")        # -> pathlib.Path to unpacked tree
+path = nxp_monkey.fetch("MIMX9352CVVXMAB") # -> pathlib.Path to unpacked tree
 details = nxp_monkey.details("MCXA156")   # -> PartDetails (header, cores, variants)
 roadmap = nxp_monkey.build_roadmap(path)  # -> dict (guide, key_files, xml_namespaces, ...)
 

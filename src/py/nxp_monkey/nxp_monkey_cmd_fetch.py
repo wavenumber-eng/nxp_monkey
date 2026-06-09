@@ -1,4 +1,4 @@
-"""``nxp-monkey fetch`` — fetch one part's data tree into the local cache.
+"""``nxp-monkey fetch`` — fetch part data trees into the local cache.
 
 Thin wrapper around :func:`nxp_monkey.fetch` and
 :func:`nxp_monkey.fetch_all`. By default, fetches every SDK variant
@@ -26,12 +26,51 @@ from rich.progress import (
 from rich.table import Table
 from rich_argparse import RichHelpFormatter
 
+from ._matching import portfolio_part_matches
 from .details import details_from_cache
-from .fetch import DEFAULT_SDK_VARIANTS, DEFAULT_VARIANT, fetch, fetch_all, mirror_part_variant
-from .kex_client import NxpFetchError
+from .fetch import (
+    DEFAULT_SDK_VARIANTS,
+    DEFAULT_VARIANT,
+    fetch,
+    fetch_all,
+    mirror_part_variant,
+)
+from .kex_client import KexClient, NxpFetchError
 from .roadmap import build_roadmap
 from .serialization import write_json
 from .xml_json import mirror_xml_tree_as_json
+
+FETCH_DESCRIPTION = (
+    "Download and unpack NXP MCUXpresso Config Tools data for one "
+    "or more parts into the local cache. Positional PART values may "
+    "be exact portfolio keys, concrete orderable numbers that match "
+    "NXP masked keys, or prefixes such as MIMX93. By default every SDK "
+    "variant NXP publishes for the part is fetched in parallel "
+    "(ksdk2_0 + zephyr3_2 + i_mx_2_0); pass --variant to restrict "
+    "to one. Unpublished variants are silently skipped."
+)
+
+FETCH_EPILOG = (
+    "Examples:\n"
+    "  nxp-monkey fetch MCXA156\n"
+    "  nxp-monkey fetch MCXA156 --variant ksdk2_0\n"
+    "  nxp-monkey fetch MIMX93 --variant ksdk2_0\n"
+    "  nxp-monkey fetch MCXA156 --output ./board_prep\n"
+    "  nxp-monkey fetch MCXA156 MCXA266\n"
+    "  nxp-monkey fetch --family MCXA\n"
+    "  nxp-monkey fetch --all\n"
+    "\n"
+    "Every fetch writes a per-part folder split by media type:\n"
+    "  <output>/<PART>/xml/<VARIANT>/...     # raw NXP binders\n"
+    "  <output>/<PART>/json/<PART>.json      # PartDetails spine\n"
+    "  <output>/<PART>/json/<PART>.roadmap.json  # inferred schema + guide\n"
+    "  <output>/<PART>/json/<VARIANT>/...    # full XML->JSON mirror\n"
+    "                                        # (one .json per .xml)\n"
+    "Use --no-json-mirror to skip the parallel tree, or\n"
+    "--json-mirror-only / --json-mirror-skip to filter by glob.\n"
+    "--json additionally writes a top-level <cwd>/fetch.json\n"
+    "invocation summary and prints its path on stdout.\n"
+)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -39,42 +78,27 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "fetch",
         help="Fetch one or more parts' data trees into the local cache",
-        description=(
-            "Download and unpack NXP MCUXpresso Config Tools data for one "
-            "or more parts into the local cache. By default every SDK "
-            "variant NXP publishes for the part is fetched in parallel "
-            "(ksdk2_0 + zephyr3_2 + i_mx_2_0); pass --variant to restrict "
-            "to one. Unpublished variants are silently skipped."
-        ),
-        epilog=(
-            "Examples:\n"
-            "  nxp-monkey fetch MCXA156\n"
-            "  nxp-monkey fetch MCXA156 --variant ksdk2_0\n"
-            "  nxp-monkey fetch MCXA156 --output ./board_prep\n"
-            "  nxp-monkey fetch MCXA156 MCXA266\n"
-            "  nxp-monkey fetch --family MCXA\n"
-            "  nxp-monkey fetch --all\n"
-            "\n"
-            "Every fetch writes a per-part folder split by media type:\n"
-            "  <output>/<PART>/xml/<VARIANT>/...     # raw NXP binders\n"
-            "  <output>/<PART>/json/<PART>.json      # PartDetails spine\n"
-            "  <output>/<PART>/json/<PART>.roadmap.json  # inferred schema + guide\n"
-            "  <output>/<PART>/json/<VARIANT>/...    # full XML->JSON mirror\n"
-            "                                        # (one .json per .xml)\n"
-            "Use --no-json-mirror to skip the parallel tree, or\n"
-            "--json-mirror-only / --json-mirror-skip to filter by glob.\n"
-            "--json additionally writes a top-level <cwd>/fetch.json\n"
-            "invocation summary and prints its path on stdout.\n"
-        ),
+        description=FETCH_DESCRIPTION,
+        epilog=FETCH_EPILOG,
         formatter_class=RichHelpFormatter,
     )
+    _add_selection_args(parser)
+    _add_behavior_args(parser)
+    _add_json_mirror_args(parser)
+    parser.set_defaults(func=run)
 
+
+def _add_selection_args(parser: argparse.ArgumentParser) -> None:
+    """Add fetch selection arguments to ``parser``."""
     selection = parser.add_argument_group("selection")
     selection.add_argument(
         "parts",
         nargs="*",
         metavar="PART",
-        help="One or more parts to fetch (omit when using --family or --all)",
+        help=(
+            "One or more exact parts, concrete orderable aliases, or prefixes "
+            "to fetch (omit when using --family or --all)"
+        ),
     )
     selection.add_argument(
         "--family",
@@ -88,6 +112,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Fetch every part in the portfolio",
     )
 
+
+def _add_behavior_args(parser: argparse.ArgumentParser) -> None:
+    """Add fetch behavior arguments to ``parser``."""
     behavior = parser.add_argument_group("behavior")
     behavior.add_argument(
         "--variant",
@@ -125,6 +152,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         ),
     )
 
+
+def _add_json_mirror_args(parser: argparse.ArgumentParser) -> None:
+    """Add XML-to-JSON mirror arguments to ``parser``."""
     json_group = parser.add_argument_group("json mirror")
     json_group.add_argument(
         "--no-json-mirror",
@@ -155,7 +185,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:
             "(applied after --json-mirror-only). Repeatable."
         ),
     )
-    parser.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -185,7 +214,7 @@ def run(args: argparse.Namespace) -> int:
         if args.all or args.family:
             exit_code = _run_bulk(args, variants, output_root, progress, results)
         else:
-            exit_code = _run_parts(args, variants, output_root, progress, results)
+            exit_code = _run_parts(args, variants, output_root, progress, results, console)
 
     # Post-run summary table on stderr (text mode and json mode both get this).
     if results:
@@ -236,6 +265,7 @@ def _run_bulk(
     results: list[dict],
 ) -> int:
     """Handle ``--all`` and ``--family`` selections."""
+    start_count = len(results)
     for variant in variants:
         def make_cb(part: str, variant_: str):
             return _make_progress_cb(progress, part, variant_)
@@ -250,7 +280,7 @@ def _run_bulk(
         for cache_path in cache_paths:
             mirror_path = mirror_part_variant(cache_path, output_root)
             results.append(_summarize(cache_path, mirror_path))
-    return 0
+    return _result_exit_code(results, start_count)
 
 
 def _run_parts(
@@ -259,10 +289,16 @@ def _run_parts(
     output_root: Path,
     progress: Progress,
     results: list[dict],
+    console: Console,
 ) -> int:
     """Handle positional ``PART`` selection."""
-    any_success = False
-    for part in args.parts:
+    start_count = len(results)
+    client = KexClient()
+    selected_parts = _resolve_requested_parts(args.parts, client, console)
+    if not selected_parts:
+        return 1
+
+    for part in selected_parts:
         for variant in variants:
             cb = _make_progress_cb(progress, part, variant)
             try:
@@ -271,6 +307,7 @@ def _run_parts(
                     variant=variant,
                     version=args.version,
                     force=args.force,
+                    client=client,
                     progress_callback=cb,
                 )
             except NxpFetchError as exc:
@@ -283,12 +320,63 @@ def _run_parts(
                 continue
             mirror_path = mirror_part_variant(cache_path, output_root)
             results.append(_summarize(cache_path, mirror_path))
-            any_success = True
 
-    if not any_success:
-        print("error: no variants fetched for the requested parts", file=sys.stderr)
-        return 1
-    return 0
+    return _result_exit_code(results, start_count)
+
+
+def _resolve_requested_parts(
+    raw_parts: list[str],
+    client: KexClient,
+    console: Console,
+) -> list[str]:
+    """Expand positional part inputs into canonical NXP portfolio keys."""
+    portfolio = client.portfolio_latest_map()
+    selected: list[str] = []
+    unresolved: list[str] = []
+    for raw_part in raw_parts:
+        matches = portfolio_part_matches(raw_part, portfolio.keys())
+        if not matches:
+            unresolved.append(raw_part)
+            continue
+        _print_resolution_note(console, raw_part, matches)
+        selected.extend(matches)
+
+    if unresolved:
+        for raw_part in unresolved:
+            print(f"error: unknown processor family or part: {raw_part}", file=sys.stderr)
+        return []
+    return _dedupe_parts(selected)
+
+
+def _print_resolution_note(console: Console, raw_part: str, matches: list[str]) -> None:
+    """Print a stderr note when positional input is expanded or normalized."""
+    if len(matches) > 1:
+        console.print(
+            f"{raw_part} matched {len(matches)} processor parts; expanding prefix"
+        )
+    elif matches[0].lower() != raw_part.lower():
+        console.print(f"{raw_part} resolved to {matches[0]}")
+
+
+def _dedupe_parts(parts: list[str]) -> list[str]:
+    """Return ``parts`` with case-insensitive duplicates removed in order."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for part in parts:
+        key = part.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(part)
+    return out
+
+
+def _result_exit_code(results: list[dict], start_count: int) -> int:
+    """Return a fetch exit code based on whether this selection produced rows."""
+    if len(results) > start_count:
+        return 0
+    print("error: no variants fetched for the requested selection", file=sys.stderr)
+    return 1
 
 
 def _summarize(cache_path: Path, mirror_path: Path) -> dict:

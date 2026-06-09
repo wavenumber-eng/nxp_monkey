@@ -1,4 +1,4 @@
-"""``nxp-monkey search`` — search the local index for parts.
+"""``nxp-monkey search`` — search indexed or portfolio parts.
 
 Thin wrapper around :func:`nxp_monkey.search`.
 """
@@ -18,12 +18,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     """Register the ``search`` subcommand on ``subparsers``."""
     parser = subparsers.add_parser(
         "search",
-        help="Search the local index for parts by name or family root",
+        help="Search parts by name or family root",
         description=(
-            "Search the local nxp_monkey index. Partial matches are "
-            "supported by default; pass --fuzzy to also rank by edit-ratio "
-            "similarity. The index must be built first with "
-            "`nxp-monkey index build`."
+            "Search the local nxp_monkey index, falling back to the NXP "
+            "portfolio map when the index has not been built. Partial "
+            "matches are supported by default; pass --fuzzy to also rank "
+            "by edit-ratio similarity."
         ),
         epilog=(
             "Examples:\n"
@@ -69,7 +69,7 @@ def run(args: argparse.Namespace) -> int:
         return 0 if hits else 1
 
     if not hits:
-        print("(no matches; did you run `nxp-monkey index build`?)")
+        print("(no matches)")
         return 1
     print("part\tfamily\tscore\tmatched")
     for hit in hits:

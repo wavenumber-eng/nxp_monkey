@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and
 this project adheres to date-based PEP 440 versions per ADR-0001
 (`YYYY.M.D[.N]`).
 
+## [2026.6.9] - 2026-06-09
+
+### Added
+
+- Added masked-part matching for NXP portfolio keys, so concrete orderable
+  values such as `MIMX9352CVVXMAB` resolve to masked keys such as
+  `MIMX9352xxxxM`.
+- Added portfolio fallback for `search` when the local SQLite index has not
+  been built.
+
+### Changed
+
+- `fetch` positional parts now accept prefixes such as `MIMX93` and expand
+  them to matching portfolio keys before downloading.
+- `fetch` now returns an error when a bulk or expanded selection produces no
+  fetched variants.
+- Search scoring now treats concrete orderable aliases as high-confidence part
+  matches.
+
 ## [2026.6.4] - 2026-06-04
 
 ### Added

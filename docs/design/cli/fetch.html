@@ -16,8 +16,10 @@
   <p>
     Download and unpack NXP MCUXpresso Config Tools data for one or more
     parts into the local cache and mirror the result into a working
-    directory tree split by media type. This is the primary data-acquisition
-    entry point for both human users and LLM/agent workflows.
+    directory tree split by media type. Positional inputs may be exact
+    NXP portfolio keys, concrete orderable MPNs, or prefixes. This is the
+    primary data-acquisition entry point for both human users and
+    LLM/agent workflows.
   </p>
 
   <h2>Usage</h2>
@@ -31,10 +33,18 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
   <h2>Selection</h2>
   <table>
     <tr><th>Form</th><th>Effect</th></tr>
-    <tr><td>positional PARTs</td><td>Fetch each named part.</td></tr>
+    <tr><td>positional PARTs</td><td>Resolve each value as an exact part, concrete orderable alias, or prefix, then fetch every matched part.</td></tr>
     <tr><td>--family PREFIX</td><td>Fetch every part whose name starts with PREFIX.</td></tr>
     <tr><td>--all</td><td>Fetch every part in the portfolio.</td></tr>
   </table>
+  <p>
+    NXP portfolio keys often contain masked characters, for example
+    <code>MIMX9352xxxxM</code>. A concrete BOM/orderable value such as
+    <code>MIMX9352CVVXMAB</code> resolves to that key when it is unique.
+    A shorter value such as <code>MIMX93</code> expands like a prefix and
+    may fetch many keys; use <code>--variant ksdk2_0</code> when only the
+    canonical silicon-data binder is needed.
+  </p>
 
   <h2>Variant handling</h2>
   <p>
@@ -96,7 +106,8 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
   <p>
     <strong>Stdout</strong> is one absolute path per line: the mirrored
     <code>DIR/&lt;PART&gt;/</code> directory for each part fetched. Stays clean
-    for pipeline use.
+    for pipeline use. If a bulk or expanded selection produces no fetched
+    variants, the command exits non-zero with a concise error.
   </p>
   <p>
     <strong>Stderr</strong> carries two rich progress views: a
@@ -123,7 +134,7 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
 from nxp_monkey import fetch, DEFAULT_SDK_VARIANTS, NxpFetchError
 for variant in DEFAULT_SDK_VARIANTS:
     try:
-        fetch("MCXA156", variant=variant)
+        fetch("MIMX9352CVVXMAB", variant=variant)
     except NxpFetchError:
         pass  # Part may not publish every variant.
 

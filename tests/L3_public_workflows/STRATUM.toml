@@ -33,7 +33,7 @@ test_case_type = "workflow"
 id = "L3_003"
 file = "test_search.py"
 name = "Search"
-description = "Search the local index"
+description = "Search indexed or portfolio parts"
 concerns = ["search"]
 test_case_type = "workflow"
 

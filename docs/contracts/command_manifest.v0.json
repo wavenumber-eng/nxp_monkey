@@ -25,7 +25,7 @@
       "name": "search",
       "design_doc": "docs/design/cli/search.html",
       "config_contract": "none",
-      "summary": "Search the local index for parts"
+      "summary": "Search indexed or portfolio parts"
     },
     {
       "name": "index",

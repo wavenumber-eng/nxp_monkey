@@ -76,3 +76,32 @@ def test_nxp_fetch_error_on_bad_xml(monkeypatch):
         client = nxp_monkey.KexClient()
         with pytest.raises(nxp_monkey.NxpFetchError):
             client.list_versions()
+
+
+def test_canonicalize_family_accepts_orderable_mask_alias(monkeypatch):
+    """Concrete orderable MPNs can resolve to one masked portfolio key."""
+
+    def fake_portfolio_map(self, *, refresh=False):  # noqa: ARG001
+        return {
+            "MIMX9352xxxxM": "26.03",
+            "MIMX9301xxxxD": "26.03",
+        }
+
+    monkeypatch.setattr(nxp_monkey.KexClient, "portfolio_latest_map", fake_portfolio_map)
+    client = nxp_monkey.KexClient()
+    assert client.canonicalize_family("MIMX9352CVVXMAB") == "MIMX9352xxxxM"
+
+
+def test_canonicalize_family_reports_ambiguous_prefix(monkeypatch):
+    """A prefix that matches multiple portfolio keys raises a useful error."""
+
+    def fake_portfolio_map(self, *, refresh=False):  # noqa: ARG001
+        return {
+            "MIMX9352xxxxM": "26.03",
+            "MIMX9301xxxxD": "26.03",
+        }
+
+    monkeypatch.setattr(nxp_monkey.KexClient, "portfolio_latest_map", fake_portfolio_map)
+    client = nxp_monkey.KexClient()
+    with pytest.raises(nxp_monkey.NxpFetchError, match="matches 2 processor families"):
+        client.canonicalize_family("MIMX93")

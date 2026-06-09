@@ -1,9 +1,13 @@
 """Exercise the public :func:`nxp_monkey.fetch` and helpers."""
 from __future__ import annotations
 
+from io import StringIO
+
 import nxp_monkey
 import pytest
 from nxp_monkey.fetch import extract_processor_zip
+from nxp_monkey.nxp_monkey_cmd_fetch import _resolve_requested_parts
+from rich.console import Console
 
 
 def test_extract_processor_zip_handles_processors_layout(tmp_path, fixture_zip):
@@ -72,3 +76,40 @@ def test_fetch_is_idempotent_when_target_exists(tmp_cache, monkeypatch, fixture_
     result = nxp_monkey.fetch("SAMPLE")
     assert result == target
     assert called["count"] == 0
+
+
+def test_fetch_selection_expands_positional_prefix(monkeypatch):
+    """The CLI resolver expands ``fetch MIMX93`` into matching portfolio keys."""
+
+    def fake_portfolio_map(self, *, refresh=False):  # noqa: ARG001
+        return {
+            "MIMX9352xxxxM": "26.03",
+            "MIMX9301xxxxD": "26.03",
+            "MCXA156": "26.03",
+        }
+
+    monkeypatch.setattr(nxp_monkey.KexClient, "portfolio_latest_map", fake_portfolio_map)
+    output = StringIO()
+    console = Console(file=output, force_terminal=False)
+    selected = _resolve_requested_parts(["MIMX93"], nxp_monkey.KexClient(), console)
+    assert selected == ["MIMX9301xxxxD", "MIMX9352xxxxM"]
+    assert "matched 2 processor parts" in output.getvalue()
+
+
+def test_fetch_selection_accepts_orderable_mpn_alias(monkeypatch):
+    """The CLI resolver maps concrete MPNs to the masked fetch key."""
+
+    def fake_portfolio_map(self, *, refresh=False):  # noqa: ARG001
+        return {
+            "MIMX9352xxxxM": "26.03",
+            "MIMX9301xxxxD": "26.03",
+        }
+
+    monkeypatch.setattr(nxp_monkey.KexClient, "portfolio_latest_map", fake_portfolio_map)
+    output = StringIO()
+    console = Console(file=output, force_terminal=False)
+    selected = _resolve_requested_parts(
+        ["MIMX9352CVVXMAB"], nxp_monkey.KexClient(), console
+    )
+    assert selected == ["MIMX9352xxxxM"]
+    assert "resolved to MIMX9352xxxxM" in output.getvalue()
