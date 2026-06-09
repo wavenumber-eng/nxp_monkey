@@ -14,7 +14,8 @@
 <section data-command="search" data-config-contract="none">
   <h2>Purpose</h2>
   <p>
-    Search the local nxp_monkey index for parts by name or family root.
+    Search parts by name or family root. The local SQLite index is used
+    when present; otherwise search falls back to the NXP portfolio map.
     Partial matches (prefix and substring) are supported by default; pass
     <code>--fuzzy</code> to also rank by edit-ratio similarity for typos.
   </p>
@@ -25,7 +26,7 @@
   <h2>Arguments</h2>
   <table>
     <tr><th>Arg / flag</th><th>Effect</th></tr>
-    <tr><td>QUERY</td><td>Case-insensitive search string.</td></tr>
+    <tr><td>QUERY</td><td>Case-insensitive search string. May be a prefix or a concrete orderable MPN.</td></tr>
     <tr><td>--fuzzy</td><td>Add edit-ratio matches above 0.55 similarity.</td></tr>
     <tr><td>--limit N</td><td>Maximum number of hits (default 50).</td></tr>
   </table>
@@ -34,13 +35,14 @@
   <p>
     Tab-separated rows with columns <code>part</code>, <code>family</code>,
     <code>score</code>, <code>matched</code>. Ranked descending by score.
-    Returns exit code 1 with a hint when the index is empty.
+    Returns exit code 1 when no index or portfolio match is found.
   </p>
 
   <h2>Scoring</h2>
   <table>
     <tr><th>Match</th><th>Score</th></tr>
     <tr><td>exact part match</td><td>1.00</td></tr>
+    <tr><td>concrete orderable alias for a masked key</td><td>0.98</td></tr>
     <tr><td>exact family match</td><td>0.95</td></tr>
     <tr><td>part prefix</td><td>0.90</td></tr>
     <tr><td>family prefix</td><td>0.85</td></tr>

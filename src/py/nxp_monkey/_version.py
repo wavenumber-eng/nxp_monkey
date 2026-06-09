@@ -6,4 +6,4 @@ matches the Git tag (see ADR-0001).
 """
 from __future__ import annotations
 
-__version__ = "2026.6.4"
+__version__ = "2026.6.9"

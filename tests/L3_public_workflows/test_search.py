@@ -42,6 +42,41 @@ def test_search_returns_empty_for_unknown(populated_index):
     assert hits == []
 
 
+def test_search_falls_back_to_portfolio_without_index(monkeypatch):
+    """Search still finds prefix matches when the SQLite index is absent."""
+    from nxp_monkey.kex_client import KexClient
+
+    def fake_portfolio_map(self, *, refresh=False):  # noqa: ARG001
+        return {
+            "MIMX9301xxxxD": "26.03",
+            "MIMX9352xxxxM": "26.03",
+            "MCXA156": "26.03",
+        }
+
+    monkeypatch.setattr(KexClient, "portfolio_latest_map", fake_portfolio_map)
+    hits = nxp_monkey.search("MIMX93")
+    parts = {hit.part for hit in hits}
+    assert {"MIMX9301xxxxD", "MIMX9352xxxxM"}.issubset(parts)
+    assert "MCXA156" not in parts
+
+
+def test_search_matches_orderable_mpn_to_masked_portfolio_key(monkeypatch):
+    """A concrete orderable part number resolves to the masked NXP key."""
+    from nxp_monkey.kex_client import KexClient
+
+    def fake_portfolio_map(self, *, refresh=False):  # noqa: ARG001
+        return {
+            "MIMX9352xxxxM": "26.03",
+            "MIMX9301xxxxD": "26.03",
+        }
+
+    monkeypatch.setattr(KexClient, "portfolio_latest_map", fake_portfolio_map)
+    hits = nxp_monkey.search("MIMX9352CVVXMAB")
+    assert hits
+    assert hits[0].part == "MIMX9352xxxxM"
+    assert hits[0].score == 0.98
+
+
 def test_part_variants_reports_known(populated_index):
     """``part_variants`` returns the variant list recorded by ``build_index``."""
     variants = nxp_monkey.part_variants("MCXA156")

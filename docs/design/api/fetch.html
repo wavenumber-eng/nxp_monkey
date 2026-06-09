@@ -17,6 +17,8 @@
   <p>
     Fetch one part's data tree into the local cache, returning the path to
     the unpacked <code>processors/&lt;part&gt;/&lt;variant&gt;/</code> directory.
+    The <code>part</code> argument may be an exact portfolio key or a
+    unique concrete orderable alias for a masked key.
   </p>
   <h3>Rationale</h3>
   <p>
@@ -28,7 +30,9 @@
   <p>
     "Give me <code>part</code>'s SDK data on disk." The function selects the
     right upstream tool version automatically (portfolio-latest) so callers
-    rarely need to specify <code>version</code>.
+    rarely need to specify <code>version</code>. If the input is ambiguous
+    as a prefix, callers should use <code>fetch_all(family=...)</code> or
+    the CLI's positional prefix expansion.
   </p>
   <h3>Tests</h3>
   <ul>
@@ -44,7 +48,9 @@
   <p>
     Fetch every part in the portfolio, optionally restricted to a family
     prefix. Continues past per-part errors and returns the list of
-    successfully fetched paths.
+    successfully fetched paths. The CLI uses this behavior for
+    <code>--family</code> and additionally expands positional prefixes
+    before calling the single-part fetch path.
   </p>
   <h3>Rationale</h3>
   <p>

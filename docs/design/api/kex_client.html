@@ -31,13 +31,16 @@
     A <code>KexClient</code> with no <code>version</code> argument behaves as
     "give me the latest reasonable answer for any part you ask about." With an
     explicit version, it behaves as "answer everything against this exact
-    tool version."
+    tool version." Family canonicalization is case-insensitive and also
+    accepts unique concrete orderable aliases for masked NXP keys, for example
+    <code>MIMX9352CVVXMAB</code> to <code>MIMX9352xxxxM</code>.
   </p>
   <h3>Key methods</h3>
   <ul>
     <li><code>list_versions(refresh=False)</code></li>
     <li><code>latest_version()</code></li>
     <li><code>resolve_version(version=None)</code></li>
+    <li><code>canonicalize_family(family)</code></li>
     <li><code>resolve_version_for_family(family)</code></li>
     <li><code>portfolio_latest_map(refresh=False)</code></li>
     <li><code>list_storage_entries(path, version=None)</code></li>

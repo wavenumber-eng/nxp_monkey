@@ -28,6 +28,7 @@ from urllib import error, parse, request
 from xml.etree import ElementTree
 
 from . import cache
+from ._matching import portfolio_part_matches
 from ._version import __version__
 from .models import ApiVersion, StorageEntry
 
@@ -243,8 +244,10 @@ class KexClient:
     def resolve_version_for_family(self, family: str) -> str:
         """Resolve the newest tool version that publishes ``family``.
 
-        The lookup is case-insensitive; ``mcxa156``, ``MCXA156``, and
-        ``McXa156`` all resolve to the same upstream entry.
+        The lookup is case-insensitive and accepts a unique masked-part
+        alias. For example, an orderable value such as
+        ``MIMX9352CVVXMAB`` resolves through the portfolio key
+        ``MIMX9352xxxxM`` when that key is unique.
 
         Args:
             family: Processor family directory name (for example
@@ -254,8 +257,8 @@ class KexClient:
             Tool version name carrying that family's data.
 
         Raises:
-            NxpFetchError: If ``family`` is not present in any known
-                version.
+            NxpFetchError: If ``family`` is absent from the portfolio or
+                matches more than one masked portfolio key.
         """
         portfolio = self.portfolio_latest_map()
         canonical = self._lookup_canonical(family, portfolio)
@@ -265,25 +268,32 @@ class KexClient:
         """Return the case-correct family name as NXP publishes it.
 
         Args:
-            family: User-supplied family name (any case).
+            family: User-supplied family name, masked-family alias, or
+                orderable part prefix (any case).
 
         Returns:
             Canonical family name from the portfolio map.
 
         Raises:
-            NxpFetchError: If no family matches case-insensitively.
+            NxpFetchError: If no family matches, or if the input matches
+                multiple masked portfolio keys.
         """
         return self._lookup_canonical(family, self.portfolio_latest_map())
 
     @staticmethod
     def _lookup_canonical(family: str, portfolio: dict[str, str]) -> str:
         """Find ``family`` in ``portfolio`` case-insensitively, return canonical key."""
-        if family in portfolio:
-            return family
-        target = family.lower()
-        for key in portfolio:
-            if key.lower() == target:
-                return key
+        matches = portfolio_part_matches(family, portfolio.keys())
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            examples = ", ".join(matches[:5])
+            suffix = ", ..." if len(matches) > 5 else ""
+            raise NxpFetchError(
+                f"{family} matches {len(matches)} processor families "
+                f"({examples}{suffix}); use --family for prefix fetches "
+                "or provide a more specific part"
+            )
         raise NxpFetchError(f"Unknown processor family: {family}")
 
     @property
