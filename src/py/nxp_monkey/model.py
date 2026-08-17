@@ -588,32 +588,50 @@ def _dma(text: str, ref: str) -> list[dict[str, Any]]:
 
 
 def _flash(device: str, inputs: _Inputs) -> dict[str, Any]:
-    rows = []
     if device == "MCXA266":
         text, ref = inputs.text(f"/{device}/drivers/fsl_clock.c")
-        rows = [
-            _timing("MD", 22_500_000, 0, ref),
-            _timing("MD", 45_000_000, 1, ref),
-            _timing("OD", 36_000_000, 0, ref),
-            _timing("OD", 60_000_000, 1, ref),
-            _timing("OD", 90_000_000, 2, ref),
-            _timing("OD", 240_000_000, 4, ref),
-        ]
+        rows = _mcxa266_flash_rows(text, ref, 240_000_000)
     else:
         text, ref = inputs.text("/clock_config.c", "mcu-sdk-examples")
-        frequency_wait = {
-            (int(freq), int(wait))
-            for wait, freq in re.findall(
-                r"FMU0->FCTRL\s*=.*?RWSC\((\d+)U\).*?BOARD_BootClock(\d+)M",
-                text,
-                flags=re.DOTALL,
-            )
-        }
-        if not frequency_wait:
-            frequency_wait = {(12, 0), (24, 0), (48, 1), (64, 1), (96, 2)}
-        rows = [_timing("normal", mhz * 1_000_000, wait, ref) for mhz, wait in frequency_wait]
-    _ = text
+        rows = _mcxa156_flash_rows(text, ref)
     return {"provenance_refs": [ref], "timing_rows": rows}
+
+
+def _mcxa156_flash_rows(text: str, ref: str) -> list[dict[str, Any]]:
+    markers = list(re.finditer(r"Configuration BOARD_BootClockFRO(\d+)M", text))
+    values = set()
+    for index, marker in enumerate(markers):
+        end = markers[index + 1].start() if index + 1 < len(markers) else len(text)
+        segment = text[marker.end() : end]
+        wait = re.search(r"FMU_FCTRL_RWSC\(0x([0-9A-Fa-f]+)U\)", segment)
+        if wait is not None:
+            values.add((int(marker.group(1)), int(wait.group(1), 16)))
+    if not values:
+        raise ModelError("MCXA156 board clock source has no parseable flash timing rows")
+    return [_timing("normal", mhz * 1_000_000, wait, ref) for mhz, wait in values]
+
+
+def _mcxa266_flash_rows(text: str, ref: str, device_max: int) -> list[dict[str, Any]]:
+    function = _required_match(
+        r"(CLOCK_SetFLASHAccessCyclesForFreq\(.*?\n\})(?=\n\s*/\* Get SYSTEM)",
+        text,
+        "MCXA266 flash timing function",
+    )
+    rows = []
+    for mode in ("MD", "OD"):
+        block = _required_match(
+            rf"case \(uint32_t\)k{mode}_Mode:(.*?)break;", function, f"{mode} timing block"
+        )
+        fail = re.search(r"system_freq_hz > (\d+)U\).*?return kStatus_Fail", block, re.DOTALL)
+        upper = int(fail.group(1)) if fail else device_max
+        branches = re.findall(
+            r"system_freq_hz > (\d+)U\)\s*\{\s*num_wait_states_added = (\d+)U;", block
+        )
+        for threshold, wait_states in branches:
+            rows.append(_timing(mode, upper, int(wait_states), ref))
+            upper = int(threshold)
+        rows.append(_timing(mode, upper, 0, ref))
+    return rows
 
 
 def _timing(mode: str, frequency: int, waits: int, ref: str) -> dict[str, Any]:
@@ -972,7 +990,7 @@ def _xml_text(root: ET.Element, path: str) -> str:
 
 
 def _required_match(pattern: str, value: str, label: str) -> str:
-    match = re.search(pattern, value)
+    match = re.search(pattern, value, flags=re.DOTALL)
     if match is None:
         raise ModelError(f"missing {label}")
     return match.group(1)
