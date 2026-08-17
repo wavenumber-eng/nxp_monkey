@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -444,6 +445,52 @@ def test_resolve_rejects_nonexact_revisions_before_network(tmp_path):
             output=tmp_path / "lock.json",
             resolver_revision="1" * 40,
         )
+
+
+def test_resolve_rejects_cache_denied_profile_before_network(tmp_path, monkeypatch):
+    profile = {
+        "canonical_path": "source-locks/profiles/denied.json",
+        "consumed_sources": [
+            {
+                "disposition": {
+                    "ai_input": "allow",
+                    "cache": "deny",
+                    "generate": "allow",
+                    "redistribute": "allow",
+                    "retain": "allow",
+                },
+                "license_evidence": ["synthetic:license"],
+                "license_expression": "BSD-3-Clause",
+                "paths": ["device.h"],
+                "project": "core",
+            }
+        ],
+        "kex": {"status": "not-used"},
+        "license_policy": {},
+        "manifest_label": "fixture",
+        "optional_projects": [],
+        "profile": "pac-v0",
+        "schema_version": "0",
+    }
+    profile_path = tmp_path / "denied.json"
+    profile_path.write_text(json.dumps(profile), encoding="utf-8")
+    monkeypatch.setattr(
+        "nxp_monkey.source_lock._ensure_repository_commit",
+        lambda *args, **kwargs: pytest.fail("network path must not be called"),
+    )
+    cache = tmp_path / "cache"
+    with pytest.raises(SourceLockError, match="cache"):
+        resolve_source_lock(
+            manifest_url="https://example.invalid/manifest.git",
+            manifest_revision="1" * 40,
+            board="fixture",
+            device="MCXFIXTURE",
+            profile_spec=profile_path,
+            cache_dir=cache,
+            output=tmp_path / "lock.json",
+            resolver_revision="2" * 40,
+        )
+    assert not cache.exists()
 
 
 def test_verify_requires_explicit_offline_mode(offline_fixture):

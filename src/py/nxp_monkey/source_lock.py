@@ -26,6 +26,7 @@ _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _HTTPS_RE = re.compile(r"^https://")
 _PROFILE_PLACEHOLDER = "${PROFILE}"
 _OFFLINE_SITE_PATH = Path(__file__).with_name("_offline_site")
+_REQUIRED_PERMISSIONS = ("retain", "cache", "redistribute", "generate", "ai_input")
 
 
 class SourceLockError(RuntimeError):
@@ -534,6 +535,14 @@ def _validate_source_set(source_set: object) -> None:
         raise SourceLockError("profile consumed source set has invalid fields")
     if not source_set["paths"] or not _is_unique_list(source_set["paths"]):
         raise SourceLockError("profile source paths must be a non-empty unique list")
+    disposition = source_set["disposition"]
+    if not isinstance(disposition, dict) or any(
+        disposition.get(permission) != "allow" for permission in _REQUIRED_PERMISSIONS
+    ):
+        raise SourceLockError(
+            "profile consumed sources require retain/cache/redistribute/"
+            "generate/ai_input allow dispositions"
+        )
 
 
 def _is_unique_list(value: object) -> bool:
@@ -578,7 +587,7 @@ def _resolve_consumed_inputs(
         if project is None or not project["selected"] or project["resolved_commit"] is None:
             raise SourceLockError(f"consumed input project is not selected: {project_name!r}")
         disposition = source_set.get("disposition", {})
-        for permission in ("redistribute", "generate", "ai_input"):
+        for permission in _REQUIRED_PERMISSIONS:
             if disposition.get(permission) != "allow":
                 raise SourceLockError(
                     f"consumed source set {project_name!r} "
@@ -771,7 +780,7 @@ def _validate_consumed_inputs(consumed_inputs: list[dict], selected: set[str]) -
         )
         if any(
             consumed["disposition"][permission] != "allow"
-            for permission in ("redistribute", "generate", "ai_input")
+            for permission in _REQUIRED_PERMISSIONS
         ):
             raise SourceLockError("consumed input policy must fail closed")
 
