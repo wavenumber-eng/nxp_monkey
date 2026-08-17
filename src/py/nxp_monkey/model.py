@@ -46,6 +46,7 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
     left_path, right_path = Path(left), Path(right)
     left_value = _load_comparison_input(left_path)
     right_value = _load_comparison_input(right_path)
+    portable_pair = _is_portable_model(left_value) and _is_portable_model(right_value)
     left_projection = _comparison_projection(left_value)
     right_projection = _comparison_projection(right_value)
     findings: list[dict[str, Any]] = []
@@ -57,9 +58,15 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
             continue
         classification = "mismatch"
         disposition = "requires source or adapter correction"
+        status = "unresolved"
         if left_fact is None or right_fact is None:
-            classification = "only-in"
-            disposition = "classified v0 scope or derivative-only fact"
+            classification = "absent" if portable_pair else "only-in"
+            disposition = "classified derivative-only fact"
+            status = "classified"
+        elif portable_pair:
+            classification = _compatibility_class(key)
+            disposition = "classified device-specific value; do not reuse unchanged"
+            status = "classified"
         finding_payload = {"field": key, "left": left_fact, "right": right_fact}
         finding_id = (
             "difference:" + hashlib.sha256(canonical_json_bytes(finding_payload)).hexdigest()[:24]
@@ -72,7 +79,7 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
                 "id": finding_id,
                 "left": left_fact,
                 "right": right_fact,
-                "status": "classified" if classification == "only-in" else "unresolved",
+                "status": status,
             }
         )
     coverage = _coverage(left_value, right_value)
@@ -86,6 +93,9 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
         "summary": {
             "classified": sum(item["status"] == "classified" for item in findings),
             "equal": not findings,
+            "equal_facts": sum(
+                left_projection.get(key) == right_projection.get(key) for key in keys
+            ),
             "total_differences": len(findings),
             "unclassified": sum(item["status"] == "unresolved" for item in findings),
         },
@@ -459,10 +469,7 @@ def _capabilities(chip: dict[str, Any], ref: str) -> list[dict[str, Any]]:
 
 def _clocks(text: str, ref: str, chip: dict[str, Any]) -> list[dict[str, Any]]:
     clocks = []
-    for name, _group, _bit in re.findall(
-        r"kCLOCK_Gate([A-Z0-9]+)\s*=\s*\(\(0x([0-9A-Fa-f]+)U\s*<<\s*16U\)\s*\|\s*\((\d+)U\)\)",
-        text,
-    ):
+    for name in _gate_values(text):
         if _RELEVANT.fullmatch(name):
             clocks.append(
                 {
@@ -496,15 +503,12 @@ def _clocks(text: str, ref: str, chip: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _resets(text: str, ref: str) -> list[dict[str, Any]]:
     resets = []
-    for name, group, bit in re.findall(
-        r"k([A-Z0-9]+)_RST_SHIFT_RSTn\s*=\s*\(\((\d+)U\s*<<\s*8U\)\s*\|\s*(\d+)U\)",
-        text,
-    ):
+    for name, (group, bit) in _reset_values(text).items():
         if _RELEVANT.fullmatch(name):
             resets.append(
                 {
                     "active_level": "low",
-                    "bit": bit,
+                    "bit": str(bit),
                     "id": f"{name.lower()}-reset",
                     "provenance_refs": [ref],
                     "register": f"MRCC.GLB_RST{group}",
@@ -516,20 +520,8 @@ def _resets(text: str, ref: str) -> list[dict[str, Any]]:
 def _attach_gates(
     instances: list[dict[str, Any]], clock: str, clock_ref: str, reset: str, reset_ref: str
 ) -> list[dict[str, Any]]:
-    gates = {
-        name: (int(group, 16) // 0x10, int(bit))
-        for name, group, bit in re.findall(
-            r"kCLOCK_Gate([A-Z0-9]+)\s*=\s*\(\(0x([0-9A-Fa-f]+)U\s*<<\s*16U\)\s*\|\s*\((\d+)U\)\)",
-            clock,
-        )
-    }
-    reset_values = {
-        name: (int(group), int(bit))
-        for name, group, bit in re.findall(
-            r"k([A-Z0-9]+)_RST_SHIFT_RSTn\s*=\s*\(\((\d+)U\s*<<\s*8U\)\s*\|\s*(\d+)U\)",
-            reset,
-        )
-    }
+    gates = _gate_values(clock)
+    reset_values = _reset_values(reset)
     for instance in instances:
         name = instance["name"]
         if name in gates and name in reset_values:
@@ -549,6 +541,31 @@ def _attach_gates(
             }
             instance["provenance_refs"].extend([clock_ref, reset_ref])
     return instances
+
+
+def _gate_values(text: str) -> dict[str, tuple[int, int]]:
+    values = {}
+    for name, expression in re.findall(
+        r"kCLOCK_Gate([A-Z0-9]+)\s*=\s*(.+?),\s*/\*!< Clock gate name:", text
+    ):
+        shifted = re.search(r"0x([0-9A-Fa-f]+)U\s*<<\s*16U", expression)
+        literal = re.search(r"0x([0-9A-Fa-f]{4})U", expression)
+        group = int(shifted.group(1), 16) // 0x10 if shifted else 0
+        if shifted is None and literal is not None:
+            group = int(literal.group(1), 16) >> 16
+        bit = int(_required_match(r"\((\d+)U\)\s*\)+$", expression, f"{name} gate bit"))
+        values[name] = (group, bit)
+    return values
+
+
+def _reset_values(text: str) -> dict[str, tuple[int, int]]:
+    values = {}
+    for name, expression in re.findall(r"k([A-Z0-9]+)_RST_SHIFT_RSTn\s*=\s*(.+?),\s*/\*!<", text):
+        shifted = re.search(r"(\d+)U\s*<<\s*8U", expression)
+        group = int(shifted.group(1)) if shifted else 0
+        bit = int(_required_match(r"\(?(\d+)U\)?\s*\)+$", expression, f"{name} reset bit"))
+        values[name] = (group, bit)
+    return values
 
 
 def _dma(text: str, ref: str) -> list[dict[str, Any]]:
@@ -715,16 +732,60 @@ def _portable_projection(value: dict[str, Any]) -> dict[str, Any]:
         projection[f"/memories/{item['name']}"] = [item["address"], item["size"]]
     for item in derivative["instances"]:
         projection[f"/instances/{item['name']}/address"] = item["address"].lower()
+        projection[f"/instances/{item['name']}/gate"] = _without_provenance(item["gate"])
     for item in derivative["interrupts"]:
         projection[f"/interrupts/{item['name']}"] = item["number"]
     for item in derivative["dma_requests"]:
         projection[f"/dma/{item['name']}"] = item["number"]
     for item in value["packages"]:
         projection[f"/packages/{item['sku']}"] = item["bond_out_status"]
+    projection.update(_portable_pin_projection(derivative))
+    projection.update(_portable_hardware_projection(value, derivative))
+    return projection
+
+
+def _portable_pin_projection(derivative: dict[str, Any]) -> dict[str, Any]:
+    projection: dict[str, Any] = {}
     for item in derivative["global_pins"]:
         for signal in item["signals"]:
             projection[f"/pins/{item['name']}/{signal['name']}"] = signal["mux"]
     return projection
+
+
+def _portable_hardware_projection(
+    value: dict[str, Any], derivative: dict[str, Any]
+) -> dict[str, Any]:
+    projection: dict[str, Any] = {}
+    for item in value["ip_blocks"]:
+        instance_name = item["id"].rsplit(".", 1)[-1].upper()
+        projection[f"/ip/{instance_name}/semantic_hash"] = item["semantic_hash"]
+    for item in derivative["clocks"]:
+        projection[f"/clocks/{item['id']}"] = _without_provenance(item)
+    for item in derivative["resets"]:
+        projection[f"/resets/{item['id']}"] = _without_provenance(item)
+    projection["/flash/timing_rows"] = _without_provenance(derivative["flash"]["timing_rows"])
+    for board in value["boards"]:
+        projection[f"/boards/{board['id']}/package_sku"] = board["package_sku"]
+        for resource in board["resources"]:
+            key = f"/boards/{board['id']}/{resource['type']}/{resource['name']}"
+            projection[key] = _without_provenance(resource)
+    return projection
+
+
+def _compatibility_class(field: str) -> str:
+    if field.startswith(("/ip/", "/instances/", "/interrupts/", "/dma/")):
+        return "incompatible"
+    return "curated-compatible"
+
+
+def _is_portable_model(value: dict[str, Any]) -> bool:
+    return value.get("schema_version") == "0" and "derivatives" in value
+
+
+def _without_provenance(value: Any) -> Any:
+    projected = copy.deepcopy(value)
+    _remove_key(projected, "provenance_refs")
+    return projected
 
 
 def _adapter_projection(value: dict[str, Any]) -> dict[str, Any]:

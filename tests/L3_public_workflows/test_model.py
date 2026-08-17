@@ -52,6 +52,7 @@ def test_compare_equal_models_is_canonical(tmp_path: Path) -> None:
     assert report["summary"] == {
         "classified": 0,
         "equal": True,
+        "equal_facts": 4,
         "total_differences": 0,
         "unclassified": 0,
     }
@@ -59,7 +60,7 @@ def test_compare_equal_models_is_canonical(tmp_path: Path) -> None:
     assert json.loads(output.read_text(encoding="utf-8")) == report
 
 
-def test_compare_classifies_only_in_without_hiding_mismatch(tmp_path: Path) -> None:
+def test_compare_classifies_portable_model_compatibility(tmp_path: Path) -> None:
     left = _example()
     right = copy.deepcopy(left)
     right["derivatives"][0]["priority_bits"]["value"] = 4
@@ -67,8 +68,21 @@ def test_compare_classifies_only_in_without_hiding_mismatch(tmp_path: Path) -> N
     left_path.write_text(json.dumps(left), encoding="utf-8")
     right_path.write_text(json.dumps(right), encoding="utf-8")
     report = compare_models(left=left_path, right=right_path, output=tmp_path / "report.json")
-    assert report["summary"]["unclassified"] == 1
+    assert report["summary"]["unclassified"] == 0
     assert report["findings"][0]["field"] == "/priority_bits"
+    assert report["findings"][0]["classification"] == "curated-compatible"
+
+
+def test_compare_keeps_adapter_mismatch_unresolved(tmp_path: Path) -> None:
+    adapter = tmp_path / "adapter.json"
+    adapter.write_text(
+        json.dumps({"chips": [], "nvic_prio_bits": 4, "peripherals": []}),
+        encoding="utf-8",
+    )
+    report = compare_models(left=EXAMPLE, right=adapter, output=tmp_path / "report.json")
+    assert report["summary"]["unclassified"] == 1
+    mismatch = next(item for item in report["findings"] if item["field"] == "/priority_bits")
+    assert mismatch["classification"] == "mismatch"
 
 
 def test_compare_accepts_generated_nxp_pac_rust(tmp_path: Path) -> None:
