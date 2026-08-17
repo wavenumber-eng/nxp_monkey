@@ -23,7 +23,7 @@ def _responder_factory(versions_xml: bytes, processors_xml: bytes, family_xml: b
 def test_list_versions_parses_fixture(
     monkeypatch, fixture_versions_xml, fixture_processors_dir_xml, fixture_family_dir_xml
 ):
-    """``KexClient.list_versions`` parses captured XML into ``ApiVersion`` rows."""
+    """``KexClient.list_versions`` parses synthetic XML into ``ApiVersion`` rows."""
     with patch_urlopen(
         monkeypatch,
         _responder_factory(

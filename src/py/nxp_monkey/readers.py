@@ -4,15 +4,15 @@ These readers cover the small high-value files that describe the
 structure of a part — top-level processor header, per-variant manifest,
 core list, and the ``processor.properties`` key=value file. The heavier
 payloads (registers, signal configuration, clocks) are deliberately not
-covered here; agents reach those via the :class:`~nxp_monkey.PartDetails`
+covered here; authorized non-AI tools reach those via the :class:`~nxp_monkey.PartDetails`
 ``root`` path and per-variant ``db_links``.
 
 Every reader takes a single :class:`pathlib.Path` and returns either a
 dataclass from :mod:`nxp_monkey.models` or a primitive. They never hit
 the network and never cache state beyond what XML parsing implies.
 
-See ``docs/research/xml_survey.md`` for the schema universe these
-readers target and the namespaces in play.
+The readers preserve the namespace and element structure supplied by the
+authorized caller.
 """
 from __future__ import annotations
 

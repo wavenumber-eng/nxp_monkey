@@ -5,6 +5,27 @@ data discovery, fetch, indexing, and local cache inspection. Keep changes
 focused on stable CLI behavior, library-first APIs, and public documentation
 contracts.
 
+## KEX AI Boundary
+
+NXP's current Config Tools license prohibits using the licensed software as
+AI/model input. AI-assisted work in this repository must use only current-tree
+fixtures explicitly marked fully synthetic or inputs whose open license and AI
+disposition have been reviewed.
+
+- Do not download, inspect, summarize, or expose live KEX responses, KEX cache
+  contents, or KEX-derived reports to an AI agent.
+- Do not run network-marked KEX tests in an AI-assisted session.
+- Do not use `git show`, patch-producing `git log`, unscoped historical diffs,
+  or equivalent commands to expose prior versions of `tests/fixtures/kex/**`,
+  `docs/research/xml_survey.md`, or other removed KEX-derived blobs to an AI
+  agent. Current-tree inspection of the fully synthetic fixtures is allowed.
+- Historical cleanup, release withdrawal, and review of old KEX artifacts are
+  human/repository-owner operations performed outside AI context. Use a
+  sanitized export without those blobs if an AI task needs older source state.
+
+These restrictions apply even when the data remains technically reachable in
+public Git history. ADR-0010 records the owner disposition.
+
 ## Setup
 
 Use `uv` for local development:

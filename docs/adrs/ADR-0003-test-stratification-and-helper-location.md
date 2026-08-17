@@ -40,7 +40,7 @@ Tests that hit the live NXP API are reserved for an opt-in marker
 Helpers and fixtures shared across tests live in:
 
 - `tests/support_scripts/` — Python helper modules (not test files).
-- `tests/fixtures/` — captured XML, ZIP, and JSON payloads used by
+- `tests/fixtures/` — synthetic or separately authorized XML, ZIP, and JSON payloads used by
   offline tests.
 
 `tests/support_scripts/` and `tests/fixtures/` are not Python packages and are

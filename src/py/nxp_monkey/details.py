@@ -4,8 +4,7 @@ Orchestrates the small spine readers in :mod:`nxp_monkey.readers` and
 returns a :class:`~nxp_monkey.PartDetails`. Triggers a :func:`fetch`
 when the cache is empty for the requested part.
 
-See ``docs/research/xml_survey.md`` for the schema universe and
-``docs/design/api/details.html`` for the contract.
+See ``docs/design/api/details.html`` for the contract.
 """
 from __future__ import annotations
 
@@ -70,7 +69,7 @@ def details(
 
     # Application-processor parts (i.MX 7/8/9 family) carry at least one
     # Cortex-A core. This signal is variant-stable: cores_info.xml lives
-    # in common/ under every SDK variant. See xml_survey.md.
+    # in common/ under every SDK variant.
     is_application_processor = _has_application_core(cores)
 
     return PartDetails(

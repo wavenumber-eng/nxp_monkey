@@ -68,7 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
             "this flag. `fetch` always writes per-part JSON sidecars + "
             "XML->JSON mirror regardless of this flag; --json on fetch "
             "additionally writes a top-level fetch.json invocation "
-            "summary. Use this for agent / tool integration."
+            "summary. Use this for authorized non-AI tool integration."
         ),
     )
 

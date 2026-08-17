@@ -11,7 +11,7 @@ family per SDK variant) and the upstream content is effectively immutable per
 version. A local cache on disk is required for:
 
 - responsive search and indexing (no re-fetch on every command);
-- offline analysis by LLM agents and downstream tooling;
+- offline analysis by authorized humans and non-AI downstream tooling;
 - reproducible data state across machines.
 
 Cache layout is a public compatibility surface: downstream tools and users
@@ -78,7 +78,7 @@ The CLI exposes `nxp-monkey cache {path,size,clear}` wrappers.
 
 ## Consequences
 
-- Downstream tools (megamaid, agent workflows) can rely on the cache path and
+- Authorized non-AI downstream tools can rely on the cache path and
   layout being stable.
 - Cache is on the user profile by default; this is appropriate for a
   per-user developer tool. Server / multi-user contexts will need an explicit

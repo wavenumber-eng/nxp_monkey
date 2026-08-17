@@ -44,19 +44,19 @@ def tmp_cache(tmp_path, monkeypatch):
 
 @pytest.fixture()
 def fixture_versions_xml() -> bytes:
-    """Return the captured KEX versions.xml payload as bytes."""
+    """Return the fully synthetic versions XML fixture as bytes."""
     return (FIXTURES / "kex" / "versions.xml").read_bytes()
 
 
 @pytest.fixture()
 def fixture_processors_dir_xml() -> bytes:
-    """Return a captured KEX processors directory listing as bytes."""
+    """Return a fully synthetic processor-directory XML fixture as bytes."""
     return (FIXTURES / "kex" / "processors_dir.xml").read_bytes()
 
 
 @pytest.fixture()
 def fixture_family_dir_xml() -> bytes:
-    """Return a captured single-family directory listing as bytes."""
+    """Return a fully synthetic single-family XML fixture as bytes."""
     return (FIXTURES / "kex" / "family_dir.xml").read_bytes()
 
 

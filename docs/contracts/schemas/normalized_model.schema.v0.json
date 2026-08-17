@@ -1,0 +1,1202 @@
+{
+  "$defs": {
+    "board": {
+      "additionalProperties": false,
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "package_sku": {
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "resources": {
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/led_resource"
+              },
+              {
+                "$ref": "#/$defs/uart_resource"
+              }
+            ]
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "type",
+            "name"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "device",
+        "package_sku",
+        "resources",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "clock": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "source",
+            "mux",
+            "divider",
+            "gate",
+            "derived"
+          ]
+        },
+        "max_frequency_hz": {
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "parents",
+        "max_frequency_hz",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "conflict": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "mismatch",
+                  "incompatible"
+                ]
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "sources": {
+                "minItems": 2
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "classification": {
+          "enum": [
+            "missing",
+            "mismatch",
+            "incompatible",
+            "scope",
+            "allowed"
+          ]
+        },
+        "disposition": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "x-canonical-sort-key": [
+            "$value"
+          ]
+        },
+        "field": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "owner": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "locator": {
+                "type": "string"
+              },
+              "provenance_ref": {
+                "type": "string"
+              },
+              "value": {},
+              "value_sha256": {
+                "$ref": "#/$defs/sha256_id"
+              }
+            },
+            "required": [
+              "provenance_ref",
+              "locator",
+              "value",
+              "value_sha256"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "unresolved",
+            "overridden",
+            "accepted"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "field",
+        "classification",
+        "sources",
+        "status",
+        "owner",
+        "disposition",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "derivative": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/named_fact"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "name"
+          ]
+        },
+        "clocks": {
+          "items": {
+            "$ref": "#/$defs/clock"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "id"
+          ]
+        },
+        "cores": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "architecture": {
+                "type": "string"
+              },
+              "fpu": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              }
+            },
+            "required": [
+              "name",
+              "architecture",
+              "fpu",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array",
+          "x-canonical-sort-key": [
+            "name"
+          ]
+        },
+        "device": {
+          "pattern": "^[A-Z0-9]+$",
+          "type": "string"
+        },
+        "dma_requests": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "controller": {
+                "type": "string"
+              },
+              "instance": {
+                "type": "string"
+              },
+              "mux": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "number": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "signal": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "number",
+              "controller",
+              "mux",
+              "instance",
+              "signal",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "controller",
+            "number",
+            "name"
+          ]
+        },
+        "flash": {
+          "additionalProperties": false,
+          "properties": {
+            "provenance_refs": {
+              "$ref": "#/$defs/provenance_refs"
+            },
+            "timing_rows": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "max_frequency_hz": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "mode": {
+                    "type": "string"
+                  },
+                  "provenance_refs": {
+                    "$ref": "#/$defs/provenance_refs"
+                  },
+                  "temperature_max_c": {
+                    "type": "integer"
+                  },
+                  "voltage_max_mv": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "voltage_min_mv": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "wait_states": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "voltage_min_mv",
+                  "voltage_max_mv",
+                  "temperature_max_c",
+                  "mode",
+                  "max_frequency_hz",
+                  "wait_states",
+                  "provenance_refs"
+                ],
+                "type": "object"
+              },
+              "type": "array",
+              "x-canonical-sort-key": [
+                "mode",
+                "voltage_min_mv",
+                "temperature_max_c",
+                "max_frequency_hz"
+              ]
+            }
+          },
+          "required": [
+            "timing_rows",
+            "provenance_refs"
+          ],
+          "type": "object"
+        },
+        "instances": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "address": {
+                "$ref": "#/$defs/hex_address"
+              },
+              "clock_ids": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "gate": {
+                "additionalProperties": false,
+                "properties": {
+                  "bit": {
+                    "type": "string"
+                  },
+                  "config": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "enable_register": {
+                    "type": "string"
+                  },
+                  "reset_register": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "enable_register",
+                  "reset_register",
+                  "bit",
+                  "config"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "ip_block_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "reset_ids": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "name",
+              "ip_block_id",
+              "address",
+              "clock_ids",
+              "reset_ids",
+              "gate",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "address",
+            "name"
+          ]
+        },
+        "interrupts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "number": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              }
+            },
+            "required": [
+              "name",
+              "number",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "number",
+            "name"
+          ]
+        },
+        "memories": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "access": {
+                "pattern": "^[rwx]+$",
+                "type": "string"
+              },
+              "address": {
+                "$ref": "#/$defs/hex_address"
+              },
+              "cores": {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "kind": {
+                "enum": [
+                  "flash",
+                  "ram",
+                  "rom",
+                  "other"
+                ]
+              },
+              "linker_region": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "load_region": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "size": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "address",
+              "size",
+              "access",
+              "linker_region",
+              "cores",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "address",
+            "name"
+          ]
+        },
+        "priority_bits": {
+          "additionalProperties": false,
+          "properties": {
+            "provenance_refs": {
+              "$ref": "#/$defs/provenance_refs"
+            },
+            "value": {
+              "maximum": 16,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value",
+            "provenance_refs"
+          ],
+          "type": "object"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "resets": {
+          "items": {
+            "$ref": "#/$defs/reset"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "id"
+          ]
+        }
+      },
+      "required": [
+        "device",
+        "cores",
+        "priority_bits",
+        "memories",
+        "instances",
+        "interrupts",
+        "dma_requests",
+        "clocks",
+        "resets",
+        "flash",
+        "capabilities",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "fact_provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "pointer": {
+          "pattern": "^(?:/(?:[^~/]|~[01])*)+$",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        }
+      },
+      "required": [
+        "pointer",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "hex_address": {
+      "pattern": "^0x[0-9A-Fa-f]+$",
+      "type": "string"
+    },
+    "ip_block": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "registers": {
+          "items": {
+            "$ref": "#/$defs/register"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "offset",
+            "name"
+          ]
+        },
+        "semantic_hash": {
+          "$ref": "#/$defs/sha256_id"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "semantic_hash",
+        "registers",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "led_resource": {
+      "additionalProperties": false,
+      "properties": {
+        "active_level": {
+          "enum": [
+            "low",
+            "high"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "pin": {
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "type": {
+          "const": "led"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "pin",
+        "active_level",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "named_fact": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "value": {
+          "type": [
+            "boolean",
+            "integer",
+            "string"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "package": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/named_fact"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "name"
+          ]
+        },
+        "device": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "pins": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "feature": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pad": {
+                "type": "string"
+              },
+              "position": {
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "signals": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "mux": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "provenance_refs": {
+                      "$ref": "#/$defs/provenance_refs"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "mux",
+                    "provenance_refs"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-canonical-sort-key": [
+                  "mux",
+                  "name"
+                ]
+              },
+              "supply": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "pad",
+              "position",
+              "supply",
+              "feature",
+              "signals",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "pad",
+            "position"
+          ]
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "sku": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "device",
+        "sku",
+        "package",
+        "pins",
+        "capabilities",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "pin_mux": {
+      "additionalProperties": false,
+      "properties": {
+        "mux": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pin",
+        "mux"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "input_path": {
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$",
+          "type": "string"
+        },
+        "locator": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "manifest",
+            "sdk",
+            "svd",
+            "cmsis",
+            "schematic",
+            "observation",
+            "override"
+          ]
+        },
+        "source_lock_id": {
+          "$ref": "#/$defs/sha256_id"
+        }
+      },
+      "required": [
+        "id",
+        "source_lock_id",
+        "project",
+        "source_kind",
+        "input_path",
+        "locator",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "provenance_refs": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9._:-]+$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "register": {
+      "additionalProperties": false,
+      "properties": {
+        "access": {
+          "enum": [
+            "read-only",
+            "write-only",
+            "read-write"
+          ]
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/register_field"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "bit_offset",
+            "name"
+          ]
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "offset": {
+          "$ref": "#/$defs/hex_address"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "reset_value": {
+          "$ref": "#/$defs/hex_address"
+        },
+        "width_bits": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "offset",
+        "width_bits",
+        "access",
+        "fields",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "register_field": {
+      "additionalProperties": false,
+      "properties": {
+        "access": {
+          "enum": [
+            "read-only",
+            "write-only",
+            "read-write"
+          ]
+        },
+        "bit_offset": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "bit_width": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "enumerated_values": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "value": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "value",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "value",
+            "name"
+          ]
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        }
+      },
+      "required": [
+        "name",
+        "bit_offset",
+        "bit_width",
+        "access",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "reset": {
+      "additionalProperties": false,
+      "properties": {
+        "active_level": {
+          "enum": [
+            "low",
+            "high"
+          ]
+        },
+        "bit": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "register": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "register",
+        "bit",
+        "active_level",
+        "provenance_refs"
+      ],
+      "type": "object"
+    },
+    "sha256_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "uart_resource": {
+      "additionalProperties": false,
+      "properties": {
+        "baud": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "data_bits": {
+          "maximum": 9,
+          "minimum": 5,
+          "type": "integer"
+        },
+        "flow_control": {
+          "enum": [
+            "none",
+            "rts-cts"
+          ]
+        },
+        "instance": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parity": {
+          "enum": [
+            "none",
+            "even",
+            "odd"
+          ]
+        },
+        "provenance_refs": {
+          "$ref": "#/$defs/provenance_refs"
+        },
+        "rx": {
+          "$ref": "#/$defs/pin_mux"
+        },
+        "stop_bits": {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "transport": {
+          "type": "string"
+        },
+        "tx": {
+          "$ref": "#/$defs/pin_mux"
+        },
+        "type": {
+          "const": "uart"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "instance",
+        "rx",
+        "tx",
+        "baud",
+        "data_bits",
+        "parity",
+        "stop_bits",
+        "flow_control",
+        "transport",
+        "provenance_refs"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://wavenumber-eng.github.io/nxp_monkey/contracts/normalized_model.schema.v0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "boards": {
+      "items": {
+        "$ref": "#/$defs/board"
+      },
+      "type": "array",
+      "x-canonical-sort-key": [
+        "id"
+      ]
+    },
+    "canonicalization": {
+      "const": "json-sort-keys-indent-2-lf-final-newline-v0"
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/conflict"
+      },
+      "type": "array",
+      "x-canonical-sort-key": [
+        "id"
+      ]
+    },
+    "derivatives": {
+      "items": {
+        "$ref": "#/$defs/derivative"
+      },
+      "minItems": 1,
+      "type": "array",
+      "x-canonical-sort-key": [
+        "device"
+      ]
+    },
+    "fact_provenance": {
+      "items": {
+        "$ref": "#/$defs/fact_provenance"
+      },
+      "minItems": 1,
+      "type": "array",
+      "x-canonical-sort-key": [
+        "pointer"
+      ]
+    },
+    "ip_blocks": {
+      "items": {
+        "$ref": "#/$defs/ip_block"
+      },
+      "type": "array",
+      "x-canonical-sort-key": [
+        "id"
+      ]
+    },
+    "model_id": {
+      "$ref": "#/$defs/sha256_id"
+    },
+    "packages": {
+      "items": {
+        "$ref": "#/$defs/package"
+      },
+      "minItems": 1,
+      "type": "array",
+      "x-canonical-sort-key": [
+        "device",
+        "sku"
+      ]
+    },
+    "provenance": {
+      "items": {
+        "$ref": "#/$defs/provenance"
+      },
+      "minItems": 1,
+      "type": "array",
+      "x-canonical-sort-key": [
+        "id"
+      ]
+    },
+    "schema_version": {
+      "const": "0"
+    },
+    "source_lock_ids": {
+      "items": {
+        "$ref": "#/$defs/sha256_id"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true,
+      "x-canonical-sort-key": [
+        "$value"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "model_id",
+    "source_lock_ids",
+    "ip_blocks",
+    "derivatives",
+    "packages",
+    "boards",
+    "canonicalization",
+    "provenance",
+    "fact_provenance",
+    "conflicts"
+  ],
+  "title": "NXP portable normalized model v0",
+  "type": "object"
+}

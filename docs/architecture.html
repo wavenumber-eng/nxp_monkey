@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <title>NXP Monkey Architecture</title>
 </head>
-<body data-doc="architecture" data-profile="python-package">
+<body data-doc="architecture" data-doc-status="accepted" data-profile="python-package">
   <h1>Architecture</h1>
   <p>
     NXP Monkey is a library-first Python package and CLI for NXP MCUXpresso
     Config Tools KEX data. It discovers published tool versions and processor
     families, builds a local index, fetches part data trees, mirrors XML to
-    JSON, and exposes a stable local cache for humans, scripts, and agents.
+    JSON, and exposes a stable local cache for authorized humans and non-AI
+    automation. KEX content is not an AI/model input absent written permission.
   </p>
 
   <h2>Layers</h2>
@@ -20,14 +21,18 @@
     <li><code>fetch.py</code>, <code>details.py</code>, <code>roadmap.py</code>, <code>xml_json.py</code>: data acquisition and parsing.</li>
     <li><code>index.py</code> and <code>search.py</code>: local SQLite/FTS index behavior.</li>
     <li><code>nxp_monkey_cmd_*.py</code>: thin CLI command wrappers.</li>
+    <li><code>source</code> layer (planned by ADR-0010): official MCUX manifest resolution, immutable source-lock verification, acquisition provenance, and a fail-closed KEX disposition.</li>
+    <li><code>model</code> layer (planned by ADR-0010): layered portable silicon/package/board models and semantic conflict reports.</li>
     <li><code>docs/contracts/</code>: command, interface, and exception manifests.</li>
   </ul>
 
   <h2>Boundaries</h2>
   <p>
     The package fetches public NXP data on behalf of the user and keeps NXP
-    source XML semantics intact. Downstream code generation, board-specific
-    policy, and proprietary SDK handling belong outside this package. Public
+    source XML semantics intact. It may also resolve official MCUXpresso SDK
+    manifests and produce source-neutral models under ADR-0010. Downstream PAC
+    adapters/code generation, downstream board policy, and proprietary SDK
+    redistribution remain outside this package. Public
     CLI commands and importable interfaces require matching design docs,
     contract manifests, and Rack-owned tests before release.
   </p>

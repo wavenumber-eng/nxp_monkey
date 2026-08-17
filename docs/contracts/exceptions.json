@@ -8,13 +8,6 @@
       "review": "Move to strict mode after the data-boundary Any usage has explicit TypedDict or dataclass ownership."
     },
     {
-      "id": "NXP-RESEARCH-XML-SURVEY",
-      "rule": "research docs excluded from release artifacts",
-      "scope": "docs/research/xml_survey.md",
-      "rationale": "The XML survey is useful repository reference material for KEX file-format work, but this release keeps research documents out of the source distribution per ADR-0001.",
-      "review": "Promote durable file-format material into docs/canonical_format or docs/design before making it part of release artifacts."
-    },
-    {
       "id": "NXP-LEGACY-SRC-PY",
       "rule": "standard src/<package> layout",
       "scope": "src/py/nxp_monkey",

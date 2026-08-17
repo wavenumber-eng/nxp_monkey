@@ -33,8 +33,8 @@
   </ul>
   <h3>Rationale</h3>
   <p>
-    NXP publishes no XSDs, but agents that only speak JSON still need
-    to read every byte of the silicon data. A namespace-stripped tree
+    NXP publishes no XSDs, but authorized non-AI JSON consumers may need
+    a namespace-stripped tree of the silicon data. A namespace-stripped tree
     with an <code>@_xmlns</code> sidecar gives readability without
     losing the namespace family. xmltodict-style conventions keep the
     output predictable.

@@ -72,6 +72,7 @@ requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
 include = [
     "AGENTS.md",
     "src/py/nxp_monkey/**",
@@ -100,6 +101,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
+core-metadata-version = "2.4"
 packages = ["src/py/nxp_monkey"]
 
 [tool.hatch.version]

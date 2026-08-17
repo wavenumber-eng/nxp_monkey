@@ -7,7 +7,7 @@ Date: 2026-05-29
 
 `nxp_monkey` is both a public command-line application *and* a public Python
 library. It should be easy for users to install as a CLI, easy to import from
-other tools (including LLM/agent workflows) for programmatic data access, easy
+authorized non-AI tools for programmatic data access, easy
 for WN workspace setup to pin, and predictable for CI to test.
 
 Application packages may carry more dependencies than core libraries, but every

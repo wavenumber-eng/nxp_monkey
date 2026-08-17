@@ -1,0 +1,226 @@
+{
+  "boards": [],
+  "canonicalization": "json-sort-keys-indent-2-lf-final-newline-v0",
+  "conflicts": [],
+  "derivatives": [
+    {
+      "capabilities": [],
+      "clocks": [],
+      "cores": [
+        {
+          "architecture": "Armv8-M",
+          "fpu": false,
+          "name": "cm33",
+          "provenance_refs": [
+            "fixture.sample"
+          ]
+        }
+      ],
+      "device": "MCXSAMPLE",
+      "dma_requests": [],
+      "flash": {
+        "provenance_refs": [
+          "fixture.sample"
+        ],
+        "timing_rows": [
+          {
+            "max_frequency_hz": 48000000,
+            "mode": "normal",
+            "provenance_refs": [
+              "fixture.sample"
+            ],
+            "temperature_max_c": 105,
+            "voltage_max_mv": 3600,
+            "voltage_min_mv": 1700,
+            "wait_states": 0
+          }
+        ]
+      },
+      "instances": [],
+      "interrupts": [],
+      "memories": [
+        {
+          "access": "rx",
+          "address": "0x00000000",
+          "cores": [
+            "cm33"
+          ],
+          "kind": "flash",
+          "linker_region": "FLASH",
+          "name": "FLASH",
+          "provenance_refs": [
+            "fixture.sample"
+          ],
+          "size": 65536
+        }
+      ],
+      "priority_bits": {
+        "provenance_refs": [
+          "fixture.sample"
+        ],
+        "value": 3
+      },
+      "provenance_refs": [
+        "fixture.sample"
+      ],
+      "resets": []
+    }
+  ],
+  "fact_provenance": [
+    {
+      "pointer": "/derivatives/0/cores/0/architecture",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/cores/0/fpu",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/cores/0/name",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/device",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/max_frequency_hz",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/mode",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/temperature_max_c",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/voltage_max_mv",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/voltage_min_mv",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/wait_states",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/access",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/address",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/cores/0",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/kind",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/linker_region",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/name",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/memories/0/size",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/priority_bits/value",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/packages/0/device",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/packages/0/package",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/packages/0/sku",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    }
+  ],
+  "ip_blocks": [],
+  "model_id": "sha256:a0cdd6c96eccdd3492c9e36ae792f13bc13aa0db1df9e0324c5b211982f49381",
+  "packages": [
+    {
+      "capabilities": [],
+      "device": "MCXSAMPLE",
+      "package": "QFN48",
+      "pins": [],
+      "provenance_refs": [
+        "fixture.sample"
+      ],
+      "sku": "MCXSAMPLEQFN48"
+    }
+  ],
+  "provenance": [
+    {
+      "id": "fixture.sample",
+      "input_path": "tests/fixtures/parts/MCXSAMPLE",
+      "locator": "synthetic fixture",
+      "project": "synthetic",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_kind": "sdk",
+      "source_lock_id": "sha256:13e2213db6126d1c10f373d8b9bbc9ee29dbf768c6bc88dc57fb4a7bac8aec16"
+    }
+  ],
+  "schema_version": "0",
+  "source_lock_ids": [
+    "sha256:13e2213db6126d1c10f373d8b9bbc9ee29dbf768c6bc88dc57fb4a7bac8aec16"
+  ]
+}

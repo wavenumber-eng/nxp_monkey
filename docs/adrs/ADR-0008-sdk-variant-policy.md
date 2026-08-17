@@ -64,4 +64,4 @@ download cost.
 - Zephyr and i.MX users get first-class CLI and library access through the
   `variant` parameter; the package does not hide non-default variants.
 - The index keeps variant availability as a first-class fact so downstream
-  tools and agents can plan fetches without trial-and-error.
+  authorized non-AI tools can plan fetches without trial-and-error.

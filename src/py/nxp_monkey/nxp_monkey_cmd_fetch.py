@@ -222,15 +222,15 @@ def run(args: argparse.Namespace) -> int:
 
     # Always emit per-part JSON sidecars next to the mirrored XML tree, so
     # `<PART>/` carries both the raw NXP binders under `xml/` and the
-    # agent-friendly chip-data + roadmap views under `json/`. `--json`
+    # machine-readable chip-data + roadmap views under `json/`. `--json`
     # only controls stdout shape (summary path vs mirror paths).
     for part_name, payload in _per_part_details(results).items():
         target_dir = output_root / part_name / "json"
         write_json(target_dir / f"{part_name}.json", payload)
 
     # Full XML->JSON mirror (default): every <variant>/.../foo.xml becomes
-    # <PART>/json/<variant>/.../foo.json, so an agent that only speaks
-    # JSON can reach every byte of the silicon data. Suppressible with
+    # <PART>/json/<variant>/.../foo.json for authorized non-AI JSON tools.
+    # Suppressible with
     # --no-json-mirror; narrowable via --json-mirror-only/skip globs.
     # Progress UI on stderr, one bar per (part, variant).
     mirror_stats = _mirror_xml_to_json(args, results, output_root, console)
@@ -518,7 +518,7 @@ def _per_part_roadmaps(
     falls back to the first variant seen for that part. Each roadmap is
     decorated with a ``layout`` block describing the ``<PART>/`` folder
     split (``xml/`` raw binders vs ``json/`` parsed sidecars + mirror)
-    so an agent picking up just the JSON file understands the
+    so an authorized non-AI tool reading just the JSON file understands the
     surrounding on-disk layout. Returns a mapping ``part -> roadmap_dict``.
     """
     by_part: dict[str, list[dict]] = {}
@@ -561,7 +561,7 @@ def _part_folder_layout(
             "XML for top-level chip facts."
         ),
         f"json/{part}.roadmap.json": (
-            "This file. Agent guide + inferred-schema namespaces for "
+            "This file. Tree guide + inferred-schema namespaces for "
             "the canonical variant tree, plus this layout block."
         ),
     }
@@ -572,7 +572,7 @@ def _part_folder_layout(
             "Namespace-stripped tags; attributes as '@name'; mixed text "
             "as '#text'; repeated children as lists; root '@_xmlns' "
             "preserves the source namespace declarations. Lossless for "
-            "the data the LLM cares about."
+            "authorized non-AI data processing."
         )
     return {
         "part_folder": f"{part}/",

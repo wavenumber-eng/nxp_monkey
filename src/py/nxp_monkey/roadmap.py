@@ -1,10 +1,9 @@
 """Per-part roadmap + inferred schema builder.
 
 Walks an unpacked ``processors/<PART>/<VARIANT>/`` cache tree and emits a
-structured guide an LLM agent (or human) can read to locate things
-without scanning the whole directory. The output mirrors what is
-documented narratively in ``docs/research/xml_survey.md``, but is
-generated from the actual on-disk tree so it reflects the part at hand.
+structured guide an authorized human or non-AI tool can read to locate things
+without scanning the whole directory. The output is generated from the actual
+authorized on-disk tree so it reflects the part at hand.
 
 The roadmap intentionally captures:
 
@@ -26,7 +25,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-#: Optional top-level directories called out in the XML survey.
+#: Optional top-level directories recognized by the tree roadmap.
 OPTIONAL_SECTIONS = ("security", "dcdx", "ddr", "mem_validation")
 
 #: Namespaces we recognize, mapped to a short logical label.
@@ -102,7 +101,7 @@ def _collect_key_files(part_root: Path, part: str) -> dict[str, str]:
 
 
 def _collect_optional_sections(part_root: Path) -> dict[str, bool]:
-    """Note whether each survey-documented optional section exists."""
+    """Note whether each recognized optional section exists."""
     return {name: (part_root / name).is_dir() for name in OPTIONAL_SECTIONS}
 
 
@@ -200,7 +199,7 @@ def _parse_ns_uri(uri: str) -> tuple[str | None, str | None]:
     return None, None
 
 
-# --- agent guide -------------------------------------------------------------
+# --- tree guide --------------------------------------------------------------
 
 
 def _build_guide(
@@ -210,7 +209,7 @@ def _build_guide(
     codegen: dict[str, object],
     package_variants: list[dict],
 ) -> list[str]:
-    """Build a short ordered list of steps for an agent reading this tree."""
+    """Build a short ordered list of steps for an authorized non-AI reader."""
     steps = [
         f"This directory holds the {variant} binder for {part}. Same silicon "
         "as the other variants under the same processors/<PART>/ folder.",

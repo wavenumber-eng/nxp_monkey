@@ -6,7 +6,7 @@ Date: 2026-05-29
 ## Context
 
 The CLI shape of `nxp_monkey` is part of its public surface. The CLI is
-consumed by humans and by LLM/agent workflows that walk `--help` output and
+consumed by humans and by authorized non-AI tools that walk `--help` output and
 the command manifest to plan invocations. Several CLI frameworks are
 available (argparse, click, typer); the choice affects both human ergonomics
 and machine introspection.
@@ -17,7 +17,7 @@ and machine introspection.
 
 `nxp_monkey` uses `argparse` from the standard library. Reasons:
 
-- agent introspection: the argparse parser tree is walkable via
+- tool introspection: the argparse parser tree is walkable via
   `parser._actions` and `parser._subparsers`, so the command manifest in
   `docs/contracts/command_manifest.v0.json` can be generated and validated
   from literal code. Decorator-based frameworks (click, typer) hide the CLI

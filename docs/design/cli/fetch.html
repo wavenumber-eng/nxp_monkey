@@ -18,8 +18,9 @@
     parts into the local cache and mirror the result into a working
     directory tree split by media type. Positional inputs may be exact
     NXP portfolio keys, concrete orderable MPNs, or prefixes. This is the
-    primary data-acquisition entry point for both human users and
-    LLM/agent workflows.
+    primary data-acquisition entry point for authorized human users and
+    non-AI automation. Fetched KEX content must not be supplied to AI systems
+    without written NXP permission.
   </p>
 
   <h2>Usage</h2>
@@ -50,8 +51,7 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
   <p>
     By default, <code>fetch</code> pulls every SDK variant NXP publishes
     for the part (<code>ksdk2_0</code> + <code>zephyr3_2</code> +
-    <code>i_mx_2_0</code>). The theme is "grab everything; the agent sorts
-    it out." Variants the part does not publish are silently skipped. Use
+    <code>i_mx_2_0</code>). Variants the part does not publish are silently skipped. Use
     <code>--variant VARIANT</code> to restrict to a single SDK variant;
     doing so makes a missing variant an error rather than a skip.
     <code>ksdk2_0</code> remains the canonical silicon-data variant per
@@ -64,7 +64,7 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
     The platformdirs cache is always populated. In addition, each fetched
     part is mirrored into <code>DIR/&lt;PART&gt;/</code> under
     <code>--output</code> (cwd when absent), split by media type so an
-    agent can consume either side without an XML parser:
+    authorized non-AI tool can consume either side without an XML parser:
   </p>
   <pre><code>DIR/&lt;PART&gt;/
   xml/                              # raw NXP binders, one subdir per SDK variant
@@ -73,7 +73,7 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
     i_mx_2_0/...                    #   i.MX Linux binder (when published)
   json/
     &lt;PART&gt;.json                    # PartDetails spine: header, cores, packages, db_links
-    &lt;PART&gt;.roadmap.json            # agent guide + inferred schema + folder layout
+    &lt;PART&gt;.roadmap.json            # tree guide + inferred schema + folder layout
     ksdk2_0/...                     # full lossless XML-&gt;JSON mirror (one .json per .xml)
     zephyr3_2/...
     i_mx_2_0/...</code></pre>

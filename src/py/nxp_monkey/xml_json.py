@@ -2,8 +2,8 @@
 
 Walks a ``processors/<PART>/<VARIANT>/`` tree (or any directory of NXP
 KEX XML files) and emits a parallel JSON tree, one ``.json`` per
-``.xml``. Designed so an agent that only speaks JSON can reach every
-byte of the silicon data without an XML parser.
+``.xml``. Designed for authorized non-AI JSON consumers that do not have an
+XML parser.
 
 Conversion convention (xmltodict-style, namespace-stripped tags):
 

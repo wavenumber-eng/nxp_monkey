@@ -1,27 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Fully synthetic fixture; names exercise sorting and matching only. -->
 <dir>
   <entry>
-    <file_id>p1</file_id>
-    <full_path>/kex_tools/processors/MCXA156</full_path>
+    <file_id>synthetic-zeta</file_id>
+    <full_path>/synthetic/processors/ZETA100</full_path>
     <directory>true</directory>
-    <time>1700000000</time>
-    <size></size>
-    <compression></compression>
+    <time>1</time>
+    <size>0</size>
+    <compression>none</compression>
   </entry>
   <entry>
-    <file_id>p2</file_id>
-    <full_path>/kex_tools/processors/MCXA266</full_path>
+    <file_id>synthetic-mcxa156</file_id>
+    <full_path>/synthetic/processors/MCXA156</full_path>
     <directory>true</directory>
-    <time>1700000000</time>
-    <size></size>
-    <compression></compression>
-  </entry>
-  <entry>
-    <file_id>p3</file_id>
-    <full_path>/kex_tools/processors/MCXN947</full_path>
-    <directory>true</directory>
-    <time>1700000000</time>
-    <size></size>
-    <compression></compression>
+    <time>2</time>
+    <size>0</size>
+    <compression>none</compression>
   </entry>
 </dir>

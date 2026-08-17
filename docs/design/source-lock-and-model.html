@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Official Source Lock and Portable Model</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-doc="source-lock-and-model" data-doc-status="accepted">
+<header>
+  <h1>Official Source Lock and Portable Model</h1>
+  <div class="crumbs">docs / design / source-lock-and-model.html</div>
+</header>
+
+<section>
+  <h2>Purpose</h2>
+  <p>
+    Define the version-zero exchange boundary for resolving official NXP
+    sources, verifying immutable source locks, and building a downstream-neutral
+    model. ADR-0010 owns the package boundary. The NXP Rust enablement
+    coordination repository owns source-lock, generation-manifest, and
+    override-set schemas. NXP Monkey owns normalized-model schema and migration.
+  </p>
+</section>
+
+<section>
+  <h2>Source-lock contract</h2>
+  <p>A version-zero lock contains:</p>
+  <ul>
+    <li>requested device, board, and profile;</li>
+    <li>exact manifest URL, commit, content hashes, west version and commands;</li>
+    <li>recursive imports, group filters, complete project inventory, and freeze output;</li>
+    <li>full board-reference and consumed-input closures;</li>
+    <li>KEX disposition and governing-license evidence; endpoint/tool/hash fields only when policy permits its use;</li>
+    <li>license-policy revision and per-input disposition references; and</li>
+    <li>a content-derived lock ID independent of generator identity.</li>
+  </ul>
+  <p>
+    Resolution requires an exact commit and delegates recursive-import and
+    selection semantics to the pinned manifest's west extension plus west's
+    parser. Verification checks every commit and hash. Offline verification
+    performs no DNS or HTTP access.
+  </p>
+</section>
+
+<section>
+  <h2>Portable model v0</h2>
+  <p>The model has four layers with field-level provenance:</p>
+  <ol>
+    <li>peripheral IP and register blocks;</li>
+    <li>SoC derivative topology and constraints;</li>
+    <li>package/SKU availability and pins; and</li>
+    <li>board wiring and resources.</li>
+  </ol>
+  <p>
+    The MCXA156 board increment requires automated facts for core identity,
+    priority bits, memories/linker regions, interrupts, GPIO, clocks/resets,
+    flash timing, OSTIMER, LPUART0, relevant DMA relationships, capabilities,
+    and LED/VCOM pins. This narrow automation scope does not authorize an
+    incomplete downstream PAC. Non-v0 PAC fields must be separately inventoried
+    as carried/reused in the generation manifest.
+  </p>
+</section>
+
+<section>
+  <h2>Conflicts and overrides</h2>
+  <p>
+    Normalization compares sources by field class and exact scope. Conflicts
+    include stable ID, affected field, source locators and values,
+    classification, owner, disposition, and evidence. Missing required facts,
+    incompatible register shapes, address/interrupt conflicts, or unexplained
+    differences fail. Overrides are exact-scope records with an expected old
+    value and source fingerprint; stale, unmatched, multiply matched, or unused
+    overrides fail.
+  </p>
+</section>
+
+<section>
+  <h2>Generation boundary</h2>
+  <p>
+    NXP Monkey stops at the portable model and semantic reports. A downstream
+    nxp-pac adapter owns nxp-pac metadata and transform policy. Its separate
+    generation manifest names the source lock, model schema, generator revision
+    and command, override-set hash, carried/reused inventory, report IDs, and
+    output hashes.
+  </p>
+</section>
+
+<section>
+  <h2>Determinism and validation</h2>
+  <ul>
+    <li>Canonical UTF-8 JSON uses sorted keys, two-space indentation, LF, and a terminal newline.</li>
+    <li>Two clean-cache resolutions and normalizations are byte-identical.</li>
+    <li>Offline replay validates every locked commit and content hash.</li>
+    <li>Unknown, proprietary, or AI-restricted source state fails closed and is never supplied to the AI-assisted workflow or committed as a fixture.</li>
+    <li>Schema changes are versioned and require explicit migration behavior.</li>
+  </ul>
+  <p>
+    Replay is <code>nxp-monkey source verify --lock &lt;lock.json&gt;
+    --cache &lt;cache-directory&gt; --offline</code>. Offline mode forbids DNS,
+    HTTP, and git fetch operations and fails when a required object or blob is
+    missing. Normalization likewise requires <code>--offline</code> and may not
+    perform DNS, HTTP, or git fetch. The v0 resolve command requires an exact
+    manifest commit and <code>--kex-policy not-used</code>.
+  </p>
+</section>
+
+<section>
+  <h2>Canonical identity</h2>
+  <p>
+    Canonical JSON is UTF-8 with sorted object keys, two-space indentation, LF,
+    and one final newline. A record ID is SHA-256 of that canonical document
+    with only its own ID field omitted: <code>lock_id</code>,
+    <code>model_id</code>, <code>manifest_id</code>, or
+    <code>override_set_id</code>. Command arrays preserve argument order and use
+    literal <code>${CACHE}</code>, <code>${LOCK}</code>, and
+    <code>${OUTPUT}</code> tokens instead of host paths.
+  </p>
+  <p>Unordered arrays use these stable keys:</p>
+  <ul>
+    <li>locks: projects by name/path; imports by owner/path; closures lexically; inputs by project/path; groups and license evidence lexically;</li>
+    <li>models: locks and provenance refs lexically; IP blocks by ID; registers by numeric offset/name; fields by bit offset/name; derivatives by device; topology by address/number/ID then name; packages by device/SKU; pins by pad/position; signals by mux/name; boards/resources/provenance/conflicts by ID or type/name;</li>
+    <li>generation: source locks by ID; carried fields by output ID/pointer; applied overrides by override ID/output pointer; reports by kind/ID; outputs by ID; override records by ID; and unordered evidence lexically.</li>
+  </ul>
+  <p>
+    Import chains, manifest group filters, commands, and any other array whose
+    order is semantic preserve source order. A peripheral
+    <code>semantic_hash</code> hashes only its canonical register projection:
+    registers and fields including names, numeric layout, access, reset values,
+    and enumerated values, excluding provenance IDs and descriptions. A value
+    fingerprint hashes the canonical JSON value alone.
+  </p>
+</section>
+
+<section>
+  <h2>Semantic invariants</h2>
+  <p>
+    Schema validation is necessary but not sufficient. The validator requires
+    unique project paths/names and record IDs; every closure/input project must
+    resolve to a selected project; every consumed path is repository-relative;
+    every provenance/source-lock/IP/clock/reset/device/package/board reference
+    resolves; and every consumed input permits generation, redistribution, and
+    AI input. KEX <code>not-used</code> records contain no payload identity.
+    All overrides match exactly once, all carried output pointers exist, and
+    required semantic and completeness reports cover every emitted output.
+    The model's required <code>fact_provenance</code> index maps every carried
+    leaf JSON Pointer to one or more provenance records; validation rejects a
+    missing pointer, a dangling provenance reference, or an uncovered leaf.
+  </p>
+</section>
+
+<footer>
+  Normative ownership: ADR-0010. Program retention and serialized schemas:
+  wavenumber-eng-nxp-rust-enablement.
+</footer>
+</body>
+</html>

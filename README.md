@@ -26,8 +26,16 @@ and **JSON** (parsed spine + lossless XML->JSON mirror) output by default.
 `nxp_monkey` talks to NXP's public KEX storage API (the same one the
 MCUXpresso Config Tools Data Manager uses) and exposes the per-processor
 data tree — signal configurations, register variants, packages, clocks,
-resource tables — as a clean local cache that humans, scripts, and LLM
-agents can all consume.
+resource tables — as a clean local cache for authorized human use and
+non-AI automation. The current Config Tools license prohibits using the
+licensed software as AI/model input; do not provide fetched KEX content or
+derived views to an AI system without written NXP permission.
+
+ADR-0010 also defines a staged expansion for reproducible official
+MCUXpresso SDK manifest resolution, immutable source-lock verification, and a
+portable silicon/package/board model. Those source/model commands are not part
+of the released CLI until their implementation, public contracts, and tests
+land together.
 
 ## Install
 
@@ -80,7 +88,7 @@ nxp-monkey cache clear
 
 ## What you get from `fetch MCXA156`
 
-Output is split by media type so an agent can pick either side:
+Output is split by media type so an authorized non-AI tool can pick either side:
 
 ```
 MCXA156/
@@ -90,7 +98,7 @@ MCXA156/
     i_mx_2_0/...                    #  - i.MX Linux binder (when published)
   json/
     MCXA156.json                    # PartDetails spine: header, cores, package SKUs, db_links
-    MCXA156.roadmap.json            # agent guide + inferred schema + folder layout
+    MCXA156.roadmap.json            # tree guide + inferred schema + folder layout
     ksdk2_0/...                     # full XML->JSON mirror (one .json per .xml)
       MCXA156VFT/registers/ADC1.json
       MCXA156VFT/signal_configuration.json
@@ -119,7 +127,7 @@ Skip the mirror with `--no-json-mirror`, or narrow it with
 `--json-mirror-only '**/registers/**'` (repeatable glob).
 
 The global `--json` flag switches stdout to print the JSON output path
-(for tool / agent integration); JSON files are always written by
+(for authorized non-AI tool integration); JSON files are always written by
 `fetch`.
 
 ## Library quick start
@@ -158,7 +166,6 @@ nxp_monkey.cache_clear()
 - `docs/design/cli/` — one HTML doc per CLI command.
 - `docs/design/api/` — one HTML doc per public library interface.
 - `docs/contracts/` — JSON manifests + schemas (command + interface).
-- `docs/research/xml_survey.md` — narrative survey of the KEX XML schema universe.
 
 ## Testing
 

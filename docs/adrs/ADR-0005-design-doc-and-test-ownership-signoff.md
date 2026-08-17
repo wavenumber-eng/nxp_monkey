@@ -7,7 +7,7 @@ Date: 2026-05-29
 
 `nxp_monkey` is a public CLI + library package. Public commands, config
 formats, JSON outputs, dataclasses, and major interfaces need durable design
-documentation so users, LLM agents, and future maintainers can understand the
+documentation so users, authorized non-AI tools, and future maintainers can understand the
 intended behavior before changing it.
 
 ## Decision

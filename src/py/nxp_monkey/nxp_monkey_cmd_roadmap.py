@@ -1,8 +1,8 @@
-"""``nxp-monkey roadmap`` — print the per-part inferred-schema + agent guide.
+"""``nxp-monkey roadmap`` — print the per-part inferred-schema + tree guide.
 
 Thin wrapper around :func:`nxp_monkey.build_roadmap`. Fetches the part on
 demand when the cache is empty for the requested variant, then walks the
-unpacked tree and emits a roadmap dict pointing agents at where things
+unpacked tree and emits a roadmap dict pointing authorized non-AI tools at where things
 live (key files, optional sections, package variants, codegen entry
 points, XML namespaces).
 """
@@ -23,7 +23,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     """Register the ``roadmap`` subcommand on ``subparsers``."""
     parser = subparsers.add_parser(
         "roadmap",
-        help="Print a per-part inferred-schema + agent guide for one tree",
+        help="Print a per-part inferred-schema + tree guide for one tree",
         description=(
             "Walk one part's unpacked data tree and emit a roadmap "
             "describing where things live: key files, optional sections "
