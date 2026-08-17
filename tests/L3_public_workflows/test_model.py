@@ -211,6 +211,32 @@ def test_register_map_rule_is_exact_and_startup_slots_are_numbered() -> None:
     assert model_module._startup_interrupts(startup) == {"LPUART0": 31, "GPIO3": 74}
 
 
+def test_rust_register_signature_covers_width_and_array_shape() -> None:
+    source = """impl Registers {
+    pub const fn byte(self) -> crate::pac::common::Reg<Byte, crate::pac::common::R> {
+        unsafe { crate::pac::common::Reg::from_ptr(self.ptr.wrapping_add(0x0usize) as _) }
+    }
+    pub const fn half(self) -> crate::pac::common::Reg<u16, crate::pac::common::R> {
+        unsafe { crate::pac::common::Reg::from_ptr(self.ptr.wrapping_add(0x8usize) as _) }
+    }
+    pub const fn words(self, n: usize) -> crate::pac::common::Reg<Word, crate::pac::common::RW> {
+        assert!(n < 4usize);
+        unsafe { crate::pac::common::Reg::from_ptr(self.ptr.wrapping_add(0x10usize + n * 4usize) as _) }
+    }
+}
+pub struct Byte(pub u8);
+pub struct Word(pub u32);
+"""
+    original = model_module._rust_register_map_signature(source)
+    assert original["count"] == 3
+    assert model_module._rust_register_map_signature(source.replace("Byte(pub u8)", "Byte(pub u16)")) != original
+    assert model_module._rust_register_map_signature(source.replace("Reg<u16", "Reg<u32")) != original
+    assert model_module._rust_register_map_signature(source.replace("n < 4usize", "n < 3usize")) != original
+    assert model_module._rust_register_map_signature(source.replace("n * 4usize", "n * 2usize")) != original
+    with pytest.raises(model_module.ModelError, match="unresolved backing type Byte"):
+        model_module._rust_register_map_signature(source.replace("pub struct Byte(pub u8);\n", ""))
+
+
 def test_dma_controller_identity_is_consumed() -> None:
     rows = model_module._dma(
         "kDma1RequestLPUART0Rx = 21U\nkDma1RequestLPUART0Tx = 22U",

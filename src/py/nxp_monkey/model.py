@@ -65,47 +65,47 @@ _REPRODUCTION_PINS = {
 }
 _KNOWN_REGISTER_MAP_DIFFERENCES = {
     "/ip/DMA0/register_map": (
-        (5, "447bcd71192d6e77c4ab283a5294d406b3a20953ee6db399b033f3301582169f"),
-        (12, "e765d210b8c8260a7a7fce55416540ec28f85ce22e4a436c95736985f4635110"),
+        (5, "640531ef9c60444e7ad4220bdfecd8fc2d1ccc8f6bc19d4c89e2d25b787821ae"),
+        (12, "8af72a59c360b9007b2e45663d8375baa04fccb9b66c3ee8b5266498f966346e"),
     ),
     **{
         f"/ip/GPIO{index}/register_map": (
-            (45, "fd8c7787bada2729bb37a1fbae2c158d9826425192e40c35f9fd2e211d708400"),
-            (19, "ca04392c50db2b1c3747bdbb9ba0f82f3675a97bfbc867ebc450e09e9589ea64"),
+            (45, "fb0de206e0d30f36a3c91a6c1e416d2cbbefc930e3fe3c901f605e8c9a12011d"),
+            (19, "978fd0cecf7c11f83edb0b3439e7d7ccd8659e757604b689d2669b8777340619"),
         )
         for index in range(5)
     },
     "/ip/MRCC0/register_map": (
-        (86, "a6e5f7d40027c4d42f35a47772c8b84b8dec08e06b47164fa0f424741553891f"),
-        (12, "3132f7195877849dbe8d5ad6e34faeef74fe3c44e878543723515fe6d1051a70"),
+        (86, "a3af84ec55acc8cc29073e61d5b1fb81549d52286dda97722fc806ac6e2216d5"),
+        (12, "c498d06b961c3ac926fda4d4a65e96e3d2b08e25ee57f547bbd817eb75484058"),
     ),
     "/ip/OSTIMER0/register_map": (
-        (7, "3307820812bea4678001c393c52b0cf46c5034d0d77e47a07af893188663f2d4"),
-        (6, "e7528b0913ea33e58cb0b1785af078201c8ae05799ef7ef11232606b3649ca42"),
+        (7, "5a2050c0232003de39ee4dc289287c2eb75f2715dbfd41a3b8d250b24fea481f"),
+        (6, "b76261012f28a3aa2a82bc4ed30427add1bfd7e8fce8dd5979cb96db771fd48d"),
     ),
     "/ip/PORT0/register_map": (
-        (30, "c86bc72293eed1898a98026fb3113c310d141dd044e742ca6eb9adf26bc1cdf6"),
-        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+        (30, "a0aefa35c470d320ef02f5433d728ce8478764e44529912a6b7b3f2d0f13efbb"),
+        (5, "c40d8d907f76096c31c0f0bdf08881270d654596355489cd135e4e5d28f1ce35"),
     ),
     "/ip/PORT1/register_map": (
-        (29, "1e6f2dc8b20021b0bca9e0d8fa66b1569b60bbccd1ebe90e79b57a5a6c6a5391"),
-        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+        (29, "a2c02682ec2208907665f2c46c9fbaa3be9c83bf371189dee0b3c3c8a006316a"),
+        (5, "c40d8d907f76096c31c0f0bdf08881270d654596355489cd135e4e5d28f1ce35"),
     ),
     "/ip/PORT2/register_map": (
-        (31, "1a97d7c938fe5e0093bd505cd1ce9cce590f8f77348cd259d62525f3864d1f7d"),
-        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+        (31, "699155290c544fe3fbb9067f610b09809fcf3c6ebbe3f0c059f24d00667f8443"),
+        (5, "c40d8d907f76096c31c0f0bdf08881270d654596355489cd135e4e5d28f1ce35"),
     ),
     "/ip/PORT3/register_map": (
-        (38, "66de3a5245e7fa9319348ccfee49197f9d77770f8f4443cdc31a7ea0468f4453"),
-        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+        (38, "edffe7d05e88bbd641ee3a7369bbcbd68e472c5a93021482743a04b4141f903b"),
+        (5, "c40d8d907f76096c31c0f0bdf08881270d654596355489cd135e4e5d28f1ce35"),
     ),
     "/ip/PORT4/register_map": (
-        (14, "038a80ac77c6c83c794a29b23efea86888227dc42a7ce4dcfe0bd4dc08d0a9bd"),
-        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+        (14, "4749cf137acc7d39be9cb99f9b21d8f59a42a9875be2292545e279dfdfe5d422"),
+        (5, "c40d8d907f76096c31c0f0bdf08881270d654596355489cd135e4e5d28f1ce35"),
     ),
     "/ip/SCG0/register_map": (
-        (26, "43155b68cc17c01549df8ed78a7114bc579261d08a8583315fa53973fcd2f171"),
-        (39, "cf1bdcf18d7ba491f7d5223298e0d61db7d9a34679c70b2d0b80018ad9f81116"),
+        (26, "18c75a0538f5750130d12b8e069de259e9b763ccbbe7ad7e234606395207f461"),
+        (39, "d22d250f308cc337da9e29a47df7f3dece688d21a69642a051c2789aabca7f71"),
     ),
 }
 _KNOWN_COMPATIBILITY_PREFIXES = (
@@ -1492,6 +1492,9 @@ def _register_map_signature(registers: list[ModelRecord]) -> ModelRecord:
             _normalize_hex(item["offset"]),
             item["access"],
             item["width_bits"],
+            "scalar",
+            None,
+            None,
         )
         for item in registers
     )
@@ -1535,15 +1538,37 @@ def _rust_register_projections(path: Path, chip_text: str) -> ModelRecord:
 
 def _rust_register_map_signature(text: str) -> ModelRecord:
     access = {"R": "read-only", "W": "write-only", "RW": "read-write"}
-    rows = []
-    pattern = re.compile(
-        r"pub const fn\s+([a-zA-Z0-9_]+)\s*\(\s*self(?:\s*,\s*n:\s*usize)?\s*\)"
-        r"\s*->\s*crate::pac::common::Reg<[^,>]+,\s*crate::pac::common::(R|W|RW)>"
-        r".*?wrapping_add\((0x[0-9A-Fa-f]+)usize",
-        re.DOTALL,
+    widths = _rust_register_widths(text)
+    signature = re.compile(
+        r"pub const fn\s+(?P<name>[a-zA-Z0-9_]+)\s*\(\s*self"
+        r"(?P<indexed>\s*,\s*n\s*:\s*usize)?\s*\)"
+        r"\s*->\s*crate::pac::common::Reg<\s*(?P<register_type>[^,>]+?)\s*,"
+        r"\s*crate::pac::common::(?P<access>R|W|RW)>\s*\{",
+        re.MULTILINE,
     )
-    for name, mode, offset in pattern.findall(text):
-        rows.append((name.rstrip("_"), _normalize_hex(offset), access[mode], 32))
+    matches = list(signature.finditer(text))
+    rows = []
+    for index, match in enumerate(matches):
+        body_end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        body = text[match.end() : body_end]
+        address = re.search(
+            r"wrapping_add\(\s*(0x[0-9A-Fa-f]+|[0-9]+)usize"
+            r"(?:\s*\+\s*n\s*\*\s*(0x[0-9A-Fa-f]+|[0-9]+)usize)?\s*\)",
+            body,
+        )
+        if address is None:
+            raise ModelError(
+                f"generated Rust register accessor {match['name']} has no resolvable offset"
+            )
+        rows.append(
+            (
+                match["name"].rstrip("_"),
+                _normalize_hex(address.group(1)),
+                access[match["access"]],
+                _rust_register_width(match["register_type"], match["name"], widths),
+                *_rust_register_shape(match, body, address.group(2)),
+            )
+        )
     rows.sort()
     if not rows:
         raise ModelError("generated Rust peripheral module has no register map")
@@ -1551,6 +1576,47 @@ def _rust_register_map_signature(text: str) -> ModelRecord:
         "count": len(rows),
         "sha256": "sha256:" + hashlib.sha256(canonical_json_bytes(rows)).hexdigest(),
     }
+
+
+def _rust_register_widths(text: str) -> dict[str, int]:
+    widths: dict[str, int] = {}
+    for name, width_text in re.findall(
+        r"^pub struct\s+([a-zA-Z0-9_]+)\s*\(\s*pub\s+u(8|16|32|64|128)\s*\)\s*;",
+        text,
+        re.MULTILINE,
+    ):
+        width = int(width_text)
+        if name in widths and widths[name] != width:
+            raise ModelError(f"generated Rust register type {name} has conflicting widths")
+        widths[name] = width
+    return widths
+
+
+def _rust_register_width(register_type: str, accessor: str, widths: dict[str, int]) -> int:
+    register_type = register_type.strip()
+    primitive = re.fullmatch(r"u(8|16|32|64|128)", register_type)
+    if primitive is not None:
+        return int(primitive.group(1))
+    type_name = register_type.rsplit("::", 1)[-1]
+    if type_name not in widths:
+        raise ModelError(
+            f"generated Rust register accessor {accessor} "
+            f"has unresolved backing type {register_type}"
+        )
+    return widths[type_name]
+
+
+def _rust_register_shape(
+    match: re.Match[str], body: str, stride: str | None
+) -> tuple[str, int | None, int | None]:
+    if match["indexed"] is None:
+        if stride is not None:
+            raise ModelError(f"generated Rust scalar accessor {match['name']} has an array stride")
+        return ("scalar", None, None)
+    count = re.search(r"assert!\(\s*n\s*<\s*(0x[0-9A-Fa-f]+|[0-9]+)usize\s*\)", body)
+    if count is None or stride is None:
+        raise ModelError(f"generated Rust array accessor {match['name']} has no count/stride")
+    return ("array", int(count.group(1), 0), int(stride, 0))
 
 
 def _validate_comparison_model(value: ModelRecord) -> None:
