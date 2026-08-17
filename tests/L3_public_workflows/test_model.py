@@ -128,6 +128,22 @@ def test_compare_keeps_adapter_mismatch_unresolved(tmp_path: Path) -> None:
     assert mismatch["classification"] == "mismatch"
 
 
+def test_reproduction_inventory_does_not_shrink_with_portable_projection() -> None:
+    inventory = model_module._fixed_reproduction_inventory("MCXA266", "metadata")
+    assert inventory is not None
+    adapter_projection = {key: "oracle-fact" for key in inventory}
+    portable_projection = copy.deepcopy(adapter_projection)
+    portable_projection.pop("/instances/GPIO0/address")
+    keys = model_module._comparison_keys(
+        {"schema_version": "0", "derivatives": [{"device": "MCXA266"}]},
+        {"_adapter_kind": "metadata"},
+        portable_projection,
+        adapter_projection,
+    )
+    assert len(keys) == 50
+    assert "/instances/GPIO0/address" in keys
+
+
 def test_compare_accepts_generated_nxp_pac_rust(tmp_path: Path) -> None:
     rust = tmp_path / "mod.rs"
     rust.write_text(

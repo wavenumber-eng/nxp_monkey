@@ -18,6 +18,50 @@ import yaml
 from .source_lock import canonical_json_bytes, verify_source_lock
 
 _RELEVANT = re.compile(r"^(?:DMA0|GPIO[0-4]|PORT[0-4]|LPUART[02]|OSTIMER0|MRCC0|SCG0)$")
+_REPRODUCTION_INSTANCES = (
+    "DMA0",
+    "GPIO0",
+    "GPIO1",
+    "GPIO2",
+    "GPIO3",
+    "GPIO4",
+    "LPUART0",
+    "LPUART2",
+    "MRCC0",
+    "OSTIMER0",
+    "PORT0",
+    "PORT1",
+    "PORT2",
+    "PORT3",
+    "PORT4",
+    "SCG0",
+)
+_REPRODUCTION_INTERRUPTS = (
+    "GPIO0",
+    "GPIO1",
+    "GPIO2",
+    "GPIO3",
+    "GPIO4",
+    "LPUART0",
+    "OS_EVENT",
+    "SCG0",
+)
+_REPRODUCTION_PACKAGES = {
+    "MCXA156": ("MCXA156VFT", "MCXA156VLH", "MCXA156VLL", "MCXA156VMP", "MCXA156VPJ"),
+    "MCXA266": ("MCXA266VLH", "MCXA266VLL", "MCXA266VLQ", "MCXA266VPN"),
+}
+_REPRODUCTION_PINS = {
+    "MCXA156": (
+        ("P0_2", "LPUART0_RXD"),
+        ("P0_3", "LPUART0_TXD"),
+        ("P3_13", "GPIO3_13"),
+    ),
+    "MCXA266": (
+        ("P2_2", "LPUART2_TXD"),
+        ("P2_3", "LPUART2_RXD"),
+        ("P3_19", "GPIO3_19"),
+    ),
+}
 _HEX = re.compile(r"^0[xX][0-9A-Fa-f]+$")
 _MODEL_SCHEMA = (
     Path(__file__).resolve().parents[3]
@@ -1285,11 +1329,20 @@ def _comparison_keys(
     portable = left if _is_portable_model(left) else right
     adapter = right if _is_portable_model(left) else left
     device = portable["derivatives"][0]["device"]
-    portable_projection = _comparison_projection(portable)
+    portable_projection = left_projection if _is_portable_model(left) else right_projection
+    adapter_projection = right_projection if _is_portable_model(left) else left_projection
     candidate = set(left_projection) | set(right_projection)
     prefixes = ["/priority_bits"]
     interrupt_names = {"SCG0", "LPUART0", "OS_EVENT", *(f"GPIO{i}" for i in range(5))}
     adapter_kind = str(adapter.get("_adapter_kind", "metadata"))
+    fixed_inventory = _fixed_reproduction_inventory(device, adapter_kind)
+    if fixed_inventory is not None:
+        missing_adapter = sorted(fixed_inventory - set(adapter_projection))
+        if missing_adapter:
+            raise ModelError(
+                f"{adapter_kind} comparison oracle lacks required v0 facts: {missing_adapter}"
+            )
+        return sorted(fixed_inventory)
     if adapter_kind == "metadata":
         prefixes.extend(["/dma/LPUART0_", f"/packages/{device}"])
     selected = {
@@ -1304,6 +1357,25 @@ def _comparison_keys(
             key for key in candidate if key.startswith("/ip/") and key in portable_projection
         }
     return sorted(selected)
+
+
+def _fixed_reproduction_inventory(device: str, adapter_kind: str) -> set[str] | None:
+    """Return the contract-owned inventory without consulting generated model contents."""
+    packages = _REPRODUCTION_PACKAGES.get(device)
+    pins = _REPRODUCTION_PINS.get(device)
+    if packages is None or pins is None:
+        return None
+    inventory = {"/priority_bits"}
+    inventory.update(f"/interrupts/{name}" for name in _REPRODUCTION_INTERRUPTS)
+    inventory.update(f"/instances/{name}/address" for name in _REPRODUCTION_INSTANCES)
+    if adapter_kind == "rust":
+        inventory.update(f"/ip/{name}/register_map" for name in _REPRODUCTION_INSTANCES)
+        return inventory
+    inventory.update(f"/instances/{name}/gate" for name in _REPRODUCTION_INSTANCES)
+    inventory.update({"/dma/LPUART0_RX", "/dma/LPUART0_TX"})
+    inventory.update(f"/packages/{sku}" for sku in packages)
+    inventory.update(f"/pins/{pin}/{signal}" for pin, signal in pins)
+    return inventory
 
 
 def _selected_reproduction_key(

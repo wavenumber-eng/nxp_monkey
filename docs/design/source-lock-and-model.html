@@ -83,6 +83,17 @@
     CMSIS interrupt numbers are primary and are checked against startup vectors
     and matching SVD facts. A disagreement fails normalization.
   </p>
+  <p>
+    The MCXA reproduction inventory is contract-owned and does not shrink when
+    a generated model omits a fact. For MCXA156/MCXA266 it requires priority
+    bits; SCG0, LPUART0, OS_EVENT, and GPIO0-4 interrupts; DMA0, GPIO0-4,
+    PORT0-4, LPUART0, LPUART2, OSTIMER0, MRCC0, and SCG0 instances; and the
+    corresponding generated-Rust register maps. The metadata projection also
+    requires every listed instance gate, both LPUART0 DMA relationships, the
+    exact derivative package identifiers, and the three board-required
+    LED/VCOM pin signals. A comparison oracle missing any required key fails
+    closed; a model missing one emits an unresolved finding.
+  </p>
 </section>
 
 <section>
