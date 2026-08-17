@@ -174,7 +174,7 @@ def _validate_model_references(model: dict[str, Any]) -> None:
 class _Inputs:
     def __init__(self, lock: dict[str, Any], cache: Path) -> None:
         self.lock = lock
-        self.cache = cache
+        self.cache = cache / "source-v0"
         self.projects = {item["name"]: item for item in lock["projects"]}
         self.records = {
             (item["project"], item["path"]): item for item in lock["closures"]["consumed_inputs"]
