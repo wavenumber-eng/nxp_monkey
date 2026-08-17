@@ -61,9 +61,12 @@
   <p>
     V0 excludes account-gated NXP data sheets, schematics, and design archives
     because no open-source or AI-input permission is retained. It preserves
-    open-source package identifiers and global pin topology without inventing
-    per-package bond-out. Board wiring is sourced from the open-licensed BSP
-    and must be confirmed by retained hardware observation.
+    open-source package identifiers without inventing per-package bond-out.
+    No permitted v0 source provides complete global pin topology, so every
+    derivative declares its pin scope explicitly; the MCXA board increment is
+    <code>board-required-subset</code>, not a complete topology claim. Board
+    wiring is sourced from the open-licensed BSP and must be confirmed by
+    retained hardware observation.
   </p>
   <p>
     The MCXA156 board increment requires automated facts for core identity,
@@ -72,6 +75,13 @@
     and LED/VCOM pins. This narrow automation scope does not authorize an
     incomplete downstream PAC. Non-v0 PAC fields must be separately inventoried
     as carried/reused in the generation manifest.
+  </p>
+  <p>
+    Physical memory inventory and executable integration layout are distinct:
+    <code>memories</code> carries device inventory while
+    <code>linker_regions</code> is parsed from both flash and RAM linker scripts.
+    CMSIS interrupt numbers are primary and are checked against startup vectors
+    and matching SVD facts. A disagreement fails normalization.
   </p>
 </section>
 

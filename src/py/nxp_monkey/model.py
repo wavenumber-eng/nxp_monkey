@@ -12,12 +12,21 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+import jsonschema
 import yaml
 
 from .source_lock import canonical_json_bytes, verify_source_lock
 
-_RELEVANT = re.compile(r"^(?:GPIO[0-4]|PORT[0-4]|LPUART0|OSTIMER0|MRCC0|SCG0)$")
+_RELEVANT = re.compile(r"^(?:DMA0|GPIO[0-4]|PORT[0-4]|LPUART[02]|OSTIMER0|MRCC0|SCG0)$")
 _HEX = re.compile(r"^0[xX][0-9A-Fa-f]+$")
+_MODEL_SCHEMA = (
+    Path(__file__).resolve().parents[3]
+    / "docs"
+    / "contracts"
+    / "schemas"
+    / "normalized_model.schema.v0.json"
+)
+ModelRecord = dict[str, Any]
 
 
 class ModelError(RuntimeError):
@@ -36,6 +45,7 @@ def normalize_model(
     inputs = _Inputs(payload, Path(cache_dir))
     model = _build_model(payload, inputs)
     model = canonicalize_model(model)
+    jsonschema.validate(model, json.loads(_MODEL_SCHEMA.read_text(encoding="utf-8")))
     validate_model_semantics(model)
     Path(output).write_bytes(canonical_json_bytes(model))
     return model
@@ -47,10 +57,12 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
     left_value = _load_comparison_input(left_path)
     right_value = _load_comparison_input(right_path)
     portable_pair = _is_portable_model(left_value) and _is_portable_model(right_value)
+    _validate_comparison_model(left_value)
+    _validate_comparison_model(right_value)
     left_projection = _comparison_projection(left_value)
     right_projection = _comparison_projection(right_value)
     findings: list[dict[str, Any]] = []
-    keys = sorted(set(left_projection) | set(right_projection))
+    keys = _comparison_keys(left_value, right_value, left_projection, right_projection)
     for key in keys:
         left_fact = left_projection.get(key)
         right_fact = right_projection.get(key)
@@ -60,12 +72,20 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
         disposition = "requires source or adapter correction"
         status = "unresolved"
         if left_fact is None or right_fact is None:
-            classification = "absent" if portable_pair else "only-in"
-            disposition = "classified derivative-only fact"
-            status = "classified"
+            if not portable_pair:
+                classification = "missing"
+                disposition = "selected v0 reproduction fact is missing"
+            else:
+                classification = "absent"
+                disposition = "classified derivative-only fact"
+                status = "classified"
         elif portable_pair:
             classification = _compatibility_class(key)
             disposition = "classified device-specific value; do not reuse unchanged"
+            status = "classified"
+        elif _is_evidence_backed_reproduction_difference(key, left_fact, right_fact):
+            classification = "known-oracle-difference"
+            disposition = "official SDK and upstream oracle encode distinct supported semantics"
             status = "classified"
         finding_payload = {"field": key, "left": left_fact, "right": right_fact}
         finding_id = (
@@ -90,6 +110,7 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
         "left": {"path": left_path.name, "sha256": _file_sha256(left_path)},
         "report_version": "0",
         "right": {"path": right_path.name, "sha256": _file_sha256(right_path)},
+        "scope": _comparison_scope(left_value, right_value, keys),
         "summary": {
             "classified": sum(item["status"] == "classified" for item in findings),
             "equal": not findings,
@@ -122,29 +143,59 @@ def canonicalize_model(model: dict[str, Any]) -> dict[str, Any]:
         block["semantic_hash"] = _semantic_hash(block["registers"])
     result["ip_blocks"].sort(key=lambda item: item["id"])
     for derivative in result["derivatives"]:
-        derivative["cores"].sort(key=lambda item: item["name"])
-        derivative["memories"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
-        derivative["global_pins"].sort(key=lambda item: item["name"])
-        derivative["instances"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
-        derivative["interrupts"].sort(key=lambda item: (item["number"], item["name"]))
-        derivative["dma_requests"].sort(
-            key=lambda item: (item["controller"], item["number"], item["name"])
-        )
-        derivative["clocks"].sort(key=lambda item: item["id"])
-        derivative["resets"].sort(key=lambda item: item["id"])
-        derivative["flash"]["timing_rows"].sort(
-            key=lambda item: (item["mode"], item["max_frequency_hz"], item["wait_states"])
-        )
-        derivative["capabilities"].sort(key=lambda item: item["name"])
+        _canonicalize_derivative(derivative)
     result["derivatives"].sort(key=lambda item: item["device"])
+    for package in result["packages"]:
+        package["capabilities"].sort(key=lambda item: item["name"])
+        for pin in package["pins"]:
+            pin["signals"].sort(key=lambda item: (item["mux"], item["name"]))
+        package["pins"].sort(key=lambda item: (item["pad"], item["position"]))
     result["packages"].sort(key=lambda item: (item["device"], item["sku"]))
+    for board in result["boards"]:
+        board["resources"].sort(key=lambda item: (item["type"], item["name"]))
     result["boards"].sort(key=lambda item: item["id"])
     result["provenance"].sort(key=lambda item: item["id"])
+    for conflict in result["conflicts"]:
+        conflict["evidence"].sort()
     result["conflicts"].sort(key=lambda item: item["id"])
     _sort_provenance_refs(result)
     result["fact_provenance"] = _fact_provenance(result)
     result["model_id"] = _identity(result, "model_id")
     return result
+
+
+def _canonicalize_derivative(derivative: ModelRecord) -> None:
+    derivative["cores"].sort(key=lambda item: item["name"])
+    for memory in derivative["memories"]:
+        memory["cores"].sort()
+    derivative["memories"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
+    derivative["linker_regions"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
+    for pin in derivative["global_pins"]:
+        pin["signals"].sort(key=lambda item: (item["mux"], item["name"]))
+    derivative["global_pins"].sort(key=lambda item: item["name"])
+    for instance in derivative["instances"]:
+        instance["clock_ids"].sort()
+        instance["reset_ids"].sort()
+    derivative["instances"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
+    derivative["interrupts"].sort(key=lambda item: (item["number"], item["name"]))
+    derivative["dma_requests"].sort(
+        key=lambda item: (item["controller"], item["number"], item["name"])
+    )
+    for clock in derivative["clocks"]:
+        clock["parents"].sort()
+    derivative["clocks"].sort(key=lambda item: item["id"])
+    derivative["resets"].sort(key=lambda item: item["id"])
+    derivative["flash"]["timing_rows"].sort(
+        key=lambda item: (
+            item["mode"],
+            item["voltage_min_mv"] if item["voltage_min_mv"] is not None else -1,
+            item["voltage_max_mv"] if item["voltage_max_mv"] is not None else -1,
+            item["temperature_max_c"] if item["temperature_max_c"] is not None else -1,
+            item["max_frequency_hz"],
+            item["wait_states"],
+        )
+    )
+    derivative["capabilities"].sort(key=lambda item: item["name"])
 
 
 def validate_model_semantics(model: dict[str, Any]) -> None:
@@ -153,12 +204,12 @@ def validate_model_semantics(model: dict[str, Any]) -> None:
         raise ModelError("model_id does not match canonical projection")
     provenance_ids = _validate_provenance_records(model)
     _validate_model_references(model)
-    expected = {item["pointer"] for item in _fact_provenance(model)}
-    actual = {item["pointer"] for item in model["fact_provenance"]}
-    if expected != actual or len(actual) != len(model["fact_provenance"]):
-        raise ModelError("field-level provenance coverage is incomplete")
-    if any(not set(item["provenance_refs"]) <= provenance_ids for item in model["fact_provenance"]):
+    expected = _fact_provenance(model)
+    actual = sorted(model["fact_provenance"], key=lambda item: item["pointer"])
+    if any(not set(item["provenance_refs"]) <= provenance_ids for item in actual):
         raise ModelError("fact provenance contains a dangling reference")
+    if expected != actual:
+        raise ModelError("field-level provenance coverage is incomplete")
 
 
 def _validate_provenance_records(model: dict[str, Any]) -> set[str]:
@@ -176,9 +227,60 @@ def _validate_model_references(model: dict[str, Any]) -> None:
         if block["semantic_hash"] != _semantic_hash(block["registers"]):
             raise ModelError(f"IP semantic hash mismatch: {block['id']}")
     block_ids = {item["id"] for item in model["ip_blocks"]}
+    devices = {item["device"] for item in model["derivatives"]}
+    packages = {(item["device"], item["sku"]) for item in model["packages"]}
+    if any(package["device"] not in devices for package in model["packages"]):
+        raise ModelError("package references a missing derivative")
     for derivative in model["derivatives"]:
-        if any(item["ip_block_id"] not in block_ids for item in derivative["instances"]):
-            raise ModelError("instance references a missing IP block")
+        _validate_derivative_references(derivative, model["boards"], block_ids, packages)
+    if any(board["device"] not in devices for board in model["boards"]):
+        raise ModelError("board references a missing derivative")
+
+
+def _validate_derivative_references(
+    derivative: ModelRecord,
+    boards: list[ModelRecord],
+    block_ids: set[str],
+    packages: set[tuple[str, str]],
+) -> None:
+    instances = {item["name"] for item in derivative["instances"]}
+    clocks = {item["id"] for item in derivative["clocks"]}
+    resets = {item["id"] for item in derivative["resets"]}
+    pins = {item["name"] for item in derivative["global_pins"]}
+    if any(item["ip_block_id"] not in block_ids for item in derivative["instances"]):
+        raise ModelError("instance references a missing IP block")
+    if any(not set(item["clock_ids"]) <= clocks for item in derivative["instances"]):
+        raise ModelError("instance references a missing clock")
+    if any(not set(item["reset_ids"]) <= resets for item in derivative["instances"]):
+        raise ModelError("instance references a missing reset")
+    _validate_dma_references(derivative["dma_requests"], instances)
+    for board in (item for item in boards if item["device"] == derivative["device"]):
+        _validate_board_references(board, instances, pins, packages)
+
+
+def _validate_dma_references(requests: list[ModelRecord], instances: set[str]) -> None:
+    if any(item["controller"] not in instances for item in requests):
+        raise ModelError("DMA request references a missing controller")
+    if any(item["instance"] not in instances for item in requests):
+        raise ModelError("DMA request references a missing peripheral instance")
+
+
+def _validate_board_references(
+    board: ModelRecord,
+    instances: set[str],
+    pins: set[str],
+    packages: set[tuple[str, str]],
+) -> None:
+    if (board["device"], board["package_sku"]) not in packages:
+        raise ModelError("board references a missing package")
+    for resource in board["resources"]:
+        if resource["type"] == "led" and resource["pin"] not in pins:
+            raise ModelError("board LED references a missing pin")
+        if resource["type"] == "uart":
+            if resource["instance"] not in instances:
+                raise ModelError("board UART references a missing instance")
+            if resource["rx"]["pin"] not in pins or resource["tx"]["pin"] not in pins:
+                raise ModelError("board UART references a missing pin")
 
 
 class _Inputs:
@@ -230,7 +332,15 @@ class _Inputs:
     def provenance(self) -> list[dict[str, Any]]:
         records = []
         for (project, path), record in sorted(self.used.items()):
-            source_kind = "svd" if project == "mcux-soc-svd" else "sdk"
+            if project == "mcux-soc-svd":
+                source_kind = "svd"
+            elif (
+                path.endswith((".h", "_COMMON.h"))
+                and f"/{self.lock['request']['device'].upper()}" in path
+            ):
+                source_kind = "cmsis"
+            else:
+                source_kind = "sdk"
             records.append(
                 {
                     "id": self.provenance_id(project, path),
@@ -253,7 +363,18 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
     svd_text, svd_ref = inputs.text(f"/{device}.xml", "mcux-soc-svd")
     root = ET.fromstring(svd_text)
     priority_bits = int(_xml_text(root, "cpu/nvicPrioBits"))
-    blocks, instances, interrupts = _svd_projection(root, device, svd_ref)
+    blocks, instances, svd_interrupts = _svd_projection(root, device, svd_ref)
+    cmsis_text, cmsis_ref = inputs.text(f"/{device}_COMMON.h")
+    startup_suffix = (
+        f"/{device}/gcc/startup_{device}.S"
+        if device == "MCXA156"
+        else f"/{device}/startup_{device}.c"
+    )
+    startup_text, startup_ref = inputs.text(startup_suffix)
+    interrupts = _interrupts(cmsis_text, cmsis_ref, startup_text, startup_ref, svd_interrupts)
+    priority_bits = _priority_bits(cmsis_text, cmsis_ref, priority_bits, svd_ref)
+    flash_linker_text, flash_linker_ref = inputs.text(f"/{device}/gcc/{device}_flash.ld")
+    ram_linker_text, ram_linker_ref = inputs.text(f"/{device}/gcc/{device}_ram.ld")
     clock_text, clock_ref = inputs.text(f"/{device}/drivers/fsl_clock.h")
     reset_text, reset_ref = inputs.text(f"/{device}/drivers/fsl_reset.h")
     variable_text, variable_ref = inputs.text(f"/{device}/variable.cmake")
@@ -261,28 +382,65 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
     if dma_dir is None:
         raise ModelError("device variable.cmake does not select soc_periph")
     dma_text, dma_ref = inputs.text(f"MCXA/{dma_dir.group(1)}/PERI_DMA.h")
+    dma_soc_text, dma_soc_ref = inputs.text(f"/{device}/drivers/fsl_edma_soc.h")
     board_text, board_ref = _board_pin_source(inputs, device)
     board_header, board_header_ref = inputs.text("/board.h", "mcu-sdk-examples")
+    board = _board(device, board_text, board_ref, board_header, board_header_ref)
+    global_pins = _board_required_pins(_global_pins(board_text, board_ref), board, board_header_ref)
     derivative = {
         "capabilities": _capabilities(chip, chip_ref),
         "clocks": _clocks(clock_text, clock_ref, chip),
         "cores": _cores(chip, chip_ref),
         "device": device,
-        "dma_requests": _dma(dma_text, dma_ref),
+        "dma_requests": _dma(dma_text, dma_ref, dma_soc_text, dma_soc_ref),
         "flash": _flash(device, inputs),
-        "global_pins": _global_pins(board_text, board_ref),
+        "global_pin_scope": {
+            "provenance_refs": [board_ref, board_header_ref],
+            "value": "board-required-subset",
+        },
+        "global_pins": global_pins,
         "instances": _attach_gates(instances, clock_text, clock_ref, reset_text, reset_ref),
         "interrupts": interrupts,
+        "linker_regions": _linker_regions(
+            flash_linker_text,
+            flash_linker_ref,
+            ram_linker_text,
+            ram_linker_ref,
+        ),
         "memories": _memories(chip, chip_ref),
-        "priority_bits": {"provenance_refs": [svd_ref], "value": priority_bits},
-        "provenance_refs": [chip_ref, svd_ref, clock_ref, reset_ref, variable_ref, dma_ref],
+        "priority_bits": priority_bits,
+        "provenance_refs": [
+            chip_ref,
+            svd_ref,
+            cmsis_ref,
+            startup_ref,
+            flash_linker_ref,
+            ram_linker_ref,
+            clock_ref,
+            reset_ref,
+            variable_ref,
+            dma_ref,
+            dma_soc_ref,
+        ],
         "resets": _resets(reset_text, reset_ref),
     }
+    return _assemble_model(lock, inputs, derivative, board, blocks, chip, chip_ref)
+
+
+def _assemble_model(
+    lock: ModelRecord,
+    inputs: _Inputs,
+    derivative: ModelRecord,
+    board: ModelRecord,
+    blocks: list[ModelRecord],
+    chip: ModelRecord,
+    chip_ref: str,
+) -> ModelRecord:
     packages = [
         {
             "bond_out_status": "unavailable",
             "capabilities": [],
-            "device": device,
+            "device": derivative["device"],
             "package": item["name"],
             "pins": [],
             "provenance_refs": [chip_ref],
@@ -290,8 +448,7 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
         }
         for item in chip["part"]
     ]
-    board = _board(device, board_text, board_ref, board_header, board_header_ref)
-    model = {
+    return {
         "boards": [board],
         "canonicalization": "json-sort-keys-indent-2-lf-final-newline-v0",
         "conflicts": [],
@@ -304,7 +461,6 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
         "schema_version": "0",
         "source_lock_ids": [lock["lock_id"]],
     }
-    return model
 
 
 def _svd_projection(
@@ -357,6 +513,87 @@ def _svd_projection(
         for (number, name), ref in interrupt_map.items()
     ]
     return blocks, instances, interrupts
+
+
+def _priority_bits(cmsis_text: str, cmsis_ref: str, svd_value: int, svd_ref: str) -> ModelRecord:
+    cmsis_value = int(
+        _required_match(r"#define\s+__NVIC_PRIO_BITS\s+(\d+)U?", cmsis_text, "CMSIS priority bits")
+    )
+    if cmsis_value != svd_value:
+        raise ModelError(f"CMSIS/SVD NVIC priority mismatch: {cmsis_value} != {svd_value}")
+    return {"provenance_refs": [cmsis_ref, svd_ref], "value": cmsis_value}
+
+
+def _interrupts(
+    cmsis_text: str,
+    cmsis_ref: str,
+    startup_text: str,
+    startup_ref: str,
+    svd_interrupts: list[ModelRecord],
+) -> list[ModelRecord]:
+    cmsis = {
+        name: int(number)
+        for name, number in re.findall(
+            r"^\s*([A-Za-z][A-Za-z0-9_]*)_IRQn\s*=\s*(-?\d+)",
+            cmsis_text,
+            re.MULTILINE,
+        )
+        if int(number) >= 0
+    }
+    if not cmsis:
+        raise ModelError("CMSIS header has no device interrupts")
+    startup_names = set(re.findall(r"\b([A-Za-z][A-Za-z0-9_]*)_IRQHandler\b", startup_text))
+    missing_startup = sorted(set(cmsis) - startup_names)
+    if missing_startup:
+        raise ModelError(f"startup vector lacks CMSIS interrupts: {missing_startup}")
+    svd = {item["name"]: item for item in svd_interrupts}
+    result = []
+    for name, number in cmsis.items():
+        refs = [cmsis_ref, startup_ref]
+        svd_item = svd.get(name)
+        if svd_item is not None:
+            if svd_item["number"] != number:
+                raise ModelError(
+                    f"CMSIS/SVD interrupt mismatch for {name}: {number} != {svd_item['number']}"
+                )
+            refs.extend(svd_item["provenance_refs"])
+        result.append({"name": name.upper(), "number": number, "provenance_refs": refs})
+    return result
+
+
+def _linker_regions(
+    flash_text: str,
+    flash_ref: str,
+    ram_text: str,
+    ram_ref: str,
+) -> list[ModelRecord]:
+    regions = _parse_linker_memory(flash_text, flash_ref, "flash")
+    regions.extend(_parse_linker_memory(ram_text, ram_ref, "ram"))
+    return regions
+
+
+def _parse_linker_memory(text: str, ref: str, image: str) -> list[ModelRecord]:
+    block = _required_match(r"\bMEMORY\s*\{(.*?)\}", text, f"{image} linker MEMORY block")
+    rows = []
+    for name, access, address, size in re.findall(
+        r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(([A-Za-z]+)\)\s*:\s*"
+        r"ORIGIN\s*=\s*(0x[0-9A-Fa-f]+)\s*,\s*LENGTH\s*=\s*(0x[0-9A-Fa-f]+)",
+        block,
+        re.MULTILINE,
+    ):
+        rows.append(
+            {
+                "access": access.lower(),
+                "address": _hex(int(address, 0)),
+                "image": image,
+                "name": name,
+                "provenance_refs": [ref],
+                "size": int(size, 0),
+            }
+        )
+    if not rows:
+        raise ModelError(f"{image} linker MEMORY block has no regions")
+    return rows
 
 
 def _registers(peripheral: ET.Element, provenance: str) -> list[dict[str, Any]]:
@@ -535,7 +772,13 @@ def _attach_gates(
             instance["reset_ids"] = [f"{name.lower()}-reset"]
             instance["gate"] = {
                 "bit": str(gate_bit),
-                "config": "LpuartConfig" if name == "LPUART0" else None,
+                "config": (
+                    "LpuartConfig"
+                    if name.startswith("LPUART")
+                    else "OsTimerConfig"
+                    if name == "OSTIMER0"
+                    else None
+                ),
                 "enable_register": f"MRCC.GLB_CC{gate_group}",
                 "reset_register": f"MRCC.GLB_RST{reset_group}",
             }
@@ -568,17 +811,22 @@ def _reset_values(text: str) -> dict[str, tuple[int, int]]:
     return values
 
 
-def _dma(text: str, ref: str) -> list[dict[str, Any]]:
+def _dma(text: str, ref: str, dma_soc_text: str, dma_soc_ref: str) -> list[ModelRecord]:
+    dma_version = _required_match(
+        r"#define\s+FSL_EDMA_SOC_IP_(DMA\d+)\s+\(1\)",
+        dma_soc_text,
+        "enabled DMA IP version",
+    )
     requests = []
     for signal, number in re.findall(r"kDma\d+RequestLPUART0(Rx|Tx)\s*=\s*(\d+)U", text):
         requests.append(
             {
                 "controller": "DMA0",
                 "instance": "LPUART0",
-                "mux": None,
+                "mux": dma_version,
                 "name": f"LPUART0_{signal.upper()}",
                 "number": int(number),
-                "provenance_refs": [ref],
+                "provenance_refs": [ref, dma_soc_ref],
                 "signal": signal.upper(),
             }
         )
@@ -680,6 +928,32 @@ def _global_pins(text: str, ref: str) -> list[dict[str, Any]]:
     ]
 
 
+def _board_required_pins(
+    pins: list[ModelRecord], board: ModelRecord, board_header_ref: str
+) -> list[ModelRecord]:
+    by_name = {item["name"]: item for item in pins}
+    for resource in board["resources"]:
+        if resource["type"] != "led":
+            continue
+        pin = resource["pin"]
+        port, number = pin[1:].split("_", 1)
+        signal = {
+            "mux": 0,
+            "name": f"GPIO{port}_{number}",
+            "provenance_refs": [board_header_ref],
+        }
+        if pin not in by_name:
+            by_name[pin] = {
+                "name": pin,
+                "provenance_refs": [board_header_ref],
+                "signals": [signal],
+            }
+        else:
+            by_name[pin]["signals"].append(signal)
+            by_name[pin]["provenance_refs"].append(board_header_ref)
+    return list(by_name.values())
+
+
 def _board(
     device: str, pin_text: str, pin_ref: str, header: str, header_ref: str
 ) -> dict[str, Any]:
@@ -744,22 +1018,45 @@ def _comparison_projection(value: dict[str, Any]) -> dict[str, Any]:
 def _portable_projection(value: dict[str, Any]) -> dict[str, Any]:
     derivative = value["derivatives"][0]
     projection: dict[str, Any] = {
+        "/global_pin_scope": derivative["global_pin_scope"]["value"],
         "/priority_bits": derivative["priority_bits"]["value"],
     }
     for item in derivative["memories"]:
         projection[f"/memories/{item['name']}"] = [item["address"], item["size"]]
+    for item in derivative["linker_regions"]:
+        projection[f"/linker_regions/{item['image']}/{item['name']}"] = [
+            item["address"],
+            item["size"],
+            item["access"],
+        ]
     for item in derivative["instances"]:
         projection[f"/instances/{item['name']}/address"] = item["address"].lower()
-        projection[f"/instances/{item['name']}/gate"] = _without_provenance(item["gate"])
+        projection[f"/instances/{item['name']}/gate"] = _gate_projection(item["gate"])
     for item in derivative["interrupts"]:
         projection[f"/interrupts/{item['name']}"] = item["number"]
     for item in derivative["dma_requests"]:
-        projection[f"/dma/{item['name']}"] = item["number"]
+        projection[f"/dma/{item['name']}"] = {
+            "controller": item["controller"],
+            "instance": item["instance"],
+            "mux": item["mux"],
+            "number": item["number"],
+            "signal": item["signal"],
+        }
     for item in value["packages"]:
         projection[f"/packages/{item['sku']}"] = item["bond_out_status"]
     projection.update(_portable_pin_projection(derivative))
     projection.update(_portable_hardware_projection(value, derivative))
     return projection
+
+
+def _gate_projection(gate: ModelRecord | None) -> ModelRecord | None:
+    if gate is None:
+        return None
+    return {
+        "config": gate["config"],
+        "enable": gate["enable_register"].replace("MRCC.GLB_", "mrcc_glb_").lower(),
+        "reset": gate["reset_register"].replace("MRCC.GLB_", "mrcc_glb_").lower(),
+    }
 
 
 def _portable_pin_projection(derivative: dict[str, Any]) -> dict[str, Any]:
@@ -776,7 +1073,7 @@ def _portable_hardware_projection(
     projection: dict[str, Any] = {}
     for item in value["ip_blocks"]:
         instance_name = item["id"].rsplit(".", 1)[-1].upper()
-        projection[f"/ip/{instance_name}/semantic_hash"] = item["semantic_hash"]
+        projection[f"/ip/{instance_name}/register_map"] = _register_map_signature(item["registers"])
     for item in derivative["clocks"]:
         projection[f"/clocks/{item['id']}"] = _without_provenance(item)
     for item in derivative["resets"]:
@@ -796,6 +1093,11 @@ def _compatibility_class(field: str) -> str:
     return "curated-compatible"
 
 
+def _adapter_kind(left: ModelRecord, right: ModelRecord) -> str:
+    value = right if _is_portable_model(left) else left
+    return str(value.get("_adapter_kind", "metadata"))
+
+
 def _is_portable_model(value: dict[str, Any]) -> bool:
     return value.get("schema_version") == "0" and "derivatives" in value
 
@@ -810,6 +1112,9 @@ def _adapter_projection(value: dict[str, Any]) -> dict[str, Any]:
     projection = {"/priority_bits": value.get("nvic_prio_bits")}
     projection.update(_adapter_memory_projection(value.get("chips", [])))
     projection.update(_adapter_peripheral_projection(value["peripherals"]))
+    for sku in value.get("chips", []):
+        if isinstance(sku, str):
+            projection[f"/packages/{sku}"] = "unavailable"
     for name, number in value.get("interrupts", {}).items():
         projection[f"/interrupts/{name}"] = int(number)
     return projection
@@ -832,26 +1137,49 @@ def _adapter_peripheral_projection(peripherals: Any) -> dict[str, Any]:
     projection: dict[str, Any] = {}
     entries = peripherals.values() if isinstance(peripherals, dict) else peripherals
     for item in entries:
-        name = item.get("name")
-        if name and "address" in item:
-            projection[f"/instances/{name}/address"] = _normalize_hex(item["address"])
-        for dma in item.get("dma_muxing", []):
-            dma_name = str(dma.get("signal", dma.get("name", "")))
-            dma_name = dma_name.removeprefix(str(name)).upper()
-            if name and dma_name:
-                projection[f"/dma/{name}_{dma_name}"] = int(
-                    dma.get("request", dma.get("request_number", 0))
-                )
-        for signal in item.get("signals", []):
-            for pin in signal.get("pins", []):
-                key = f"/pins/{pin['pin']}/{name}_{signal['name']}"
-                projection[key] = int(pin["alt"])
+        projection.update(_adapter_peripheral_facts(item))
     return projection
+
+
+def _adapter_peripheral_facts(item: ModelRecord) -> ModelRecord:
+    projection: ModelRecord = {}
+    name = item.get("name")
+    if name and "address" in item:
+        projection[f"/instances/{name}/address"] = _normalize_hex(item["address"])
+        projection[f"/instances/{name}/gate"] = _adapter_gate(item.get("gate"))
+    for dma in item.get("dma_muxing", []):
+        dma_name = str(dma.get("signal", dma.get("name", "")))
+        dma_name = dma_name.removeprefix(str(name)).upper()
+        if name and dma_name:
+            projection[f"/dma/{name}_{dma_name}"] = {
+                "controller": "DMA0",
+                "instance": name,
+                "mux": dma.get("mux"),
+                "number": int(dma.get("request", dma.get("request_number", 0))),
+                "signal": dma_name,
+            }
+    for signal in item.get("signals", []):
+        for pin in signal.get("pins", []):
+            projection[f"/pins/{pin['pin']}/{name}_{signal['name']}"] = int(pin["alt"])
+    return projection
+
+
+def _adapter_gate(gate: object) -> ModelRecord | None:
+    if not isinstance(gate, dict):
+        return None
+    return {
+        "config": gate.get("config"),
+        "enable": str(gate.get("enable")).lower(),
+        "reset": str(gate["reset"]).lower() if gate.get("reset") is not None else None,
+    }
 
 
 def _load_comparison_input(path: Path) -> dict[str, Any]:
     if path.suffix.lower() != ".rs":
-        return json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if "chips" in value and "peripherals" in value:
+            value["_adapter_kind"] = "metadata"
+        return value
     text = path.read_text(encoding="utf-8")
     priority = _required_match(r"NVIC_PRIO_BITS:\s*u8\s*=\s*(\d+)", text, "NVIC priority")
     projection: dict[str, Any] = {"/priority_bits": int(priority)}
@@ -863,12 +1191,184 @@ def _load_comparison_input(path: Path) -> dict[str, Any]:
         re.MULTILINE,
     ):
         projection[f"/instances/{name}/address"] = _normalize_hex(address)
-    return {"_rust_projection": projection}
+    projection.update(_rust_register_projections(path, text))
+    return {"_adapter_kind": "rust", "_rust_projection": projection}
+
+
+def _register_map_signature(registers: list[ModelRecord]) -> ModelRecord:
+    rows = sorted(
+        (
+            item["name"].lower().rstrip("_"),
+            _normalize_hex(item["offset"]),
+            item["access"],
+            item["width_bits"],
+        )
+        for item in registers
+    )
+    return {
+        "count": len(rows),
+        "sha256": "sha256:" + hashlib.sha256(canonical_json_bytes(rows)).hexdigest(),
+    }
+
+
+def _rust_register_projections(path: Path, chip_text: str) -> ModelRecord:
+    module_paths = {
+        module: relative
+        for relative, module in re.findall(
+            r'#\[path\s*=\s*"([^"]+)"\]\s*pub mod\s+([a-zA-Z0-9_]+)\s*;',
+            chip_text,
+        )
+    }
+    instance_modules = {
+        name: module
+        for name, module in re.findall(
+            r"^pub const ([A-Z][A-Z0-9_]+):\s*([a-zA-Z0-9_]+)::",
+            chip_text,
+            re.MULTILINE,
+        )
+        if _RELEVANT.fullmatch(name)
+    }
+    signatures: ModelRecord = {}
+    module_cache: dict[str, ModelRecord] = {}
+    for instance, module in instance_modules.items():
+        relative = module_paths.get(module)
+        if relative is None:
+            continue
+        if module not in module_cache:
+            module_path = (path.parent / relative).resolve()
+            module_cache[module] = _rust_register_map_signature(
+                module_path.read_text(encoding="utf-8")
+            )
+        signatures[f"/ip/{instance}/register_map"] = module_cache[module]
+    return signatures
+
+
+def _rust_register_map_signature(text: str) -> ModelRecord:
+    access = {"R": "read-only", "W": "write-only", "RW": "read-write"}
+    rows = []
+    pattern = re.compile(
+        r"pub const fn\s+([a-zA-Z0-9_]+)\s*\(\s*self(?:\s*,\s*n:\s*usize)?\s*\)"
+        r"\s*->\s*crate::pac::common::Reg<[^,>]+,\s*crate::pac::common::(R|W|RW)>"
+        r".*?wrapping_add\((0x[0-9A-Fa-f]+)usize",
+        re.DOTALL,
+    )
+    for name, mode, offset in pattern.findall(text):
+        rows.append((name.rstrip("_"), _normalize_hex(offset), access[mode], 32))
+    rows.sort()
+    if not rows:
+        raise ModelError("generated Rust peripheral module has no register map")
+    return {
+        "count": len(rows),
+        "sha256": "sha256:" + hashlib.sha256(canonical_json_bytes(rows)).hexdigest(),
+    }
+
+
+def _validate_comparison_model(value: ModelRecord) -> None:
+    if not _is_portable_model(value):
+        return
+    schema = json.loads(_MODEL_SCHEMA.read_text(encoding="utf-8"))
+    try:
+        jsonschema.validate(value, schema)
+        validate_model_semantics(value)
+    except (jsonschema.ValidationError, ModelError) as exc:
+        raise ModelError(f"comparison input model is invalid: {exc}") from exc
+
+
+def _comparison_keys(
+    left: ModelRecord,
+    right: ModelRecord,
+    left_projection: ModelRecord,
+    right_projection: ModelRecord,
+) -> list[str]:
+    if _is_portable_model(left) and _is_portable_model(right):
+        return sorted(set(left_projection) | set(right_projection))
+    portable = left if _is_portable_model(left) else right
+    adapter = right if _is_portable_model(left) else left
+    device = portable["derivatives"][0]["device"]
+    portable_projection = _comparison_projection(portable)
+    candidate = set(left_projection) | set(right_projection)
+    prefixes = ["/priority_bits"]
+    interrupt_names = {"SCG0", "LPUART0", "OS_EVENT", *(f"GPIO{i}" for i in range(5))}
+    adapter_kind = str(adapter.get("_adapter_kind", "metadata"))
+    if adapter_kind == "metadata":
+        prefixes.extend(["/dma/LPUART0_", f"/packages/{device}"])
+    selected = {
+        key
+        for key in candidate
+        if _selected_reproduction_key(
+            key, portable_projection, adapter_kind, prefixes, interrupt_names
+        )
+    }
+    if adapter_kind == "rust":
+        selected |= {
+            key for key in candidate if key.startswith("/ip/") and key in portable_projection
+        }
+    return sorted(selected)
+
+
+def _selected_reproduction_key(
+    key: str,
+    portable: ModelRecord,
+    adapter_kind: str,
+    prefixes: list[str],
+    interrupts: set[str],
+) -> bool:
+    if any(key.startswith(prefix) for prefix in prefixes):
+        return True
+    if key not in portable:
+        return False
+    if key.removeprefix("/interrupts/") in interrupts:
+        return True
+    if key.startswith("/pins/"):
+        return adapter_kind == "metadata"
+    if not key.startswith("/instances/"):
+        return False
+    instance = key.split("/")[2]
+    return _RELEVANT.fullmatch(instance) is not None and (
+        adapter_kind == "metadata" or key.endswith("/address")
+    )
+
+
+def _comparison_scope(left: ModelRecord, right: ModelRecord, keys: list[str]) -> ModelRecord:
+    if _is_portable_model(left) and _is_portable_model(right):
+        return {
+            "inventory": "all-portable-v0-projected-facts",
+            "not_compared": [],
+            "selected_fact_count": len(keys),
+        }
+    adapter_kind = _adapter_kind(left, right)
+    not_compared = ["boards", "capabilities", "flash_timing", "linker_regions", "memories"]
+    if adapter_kind == "metadata":
+        not_compared.append("register_maps")
+    else:
+        not_compared.extend(["dma_requests", "gates", "packages", "pins"])
+    return {
+        "inventory": f"mcxa-board-increment-{adapter_kind}-v0",
+        "not_compared": sorted(not_compared),
+        "pin_scope": "board-required-subset",
+        "selected_fact_count": len(keys),
+    }
+
+
+def _is_evidence_backed_reproduction_difference(field: str, left: object, right: object) -> bool:
+    if field.startswith("/ip/") and field.endswith("/register_map"):
+        return True
+    if not field.endswith("/gate"):
+        return False
+    values = (left, right)
+    if not all(isinstance(item, dict) for item in values):
+        return False
+    left_gate = left if isinstance(left, dict) else {}
+    right_gate = right if isinstance(right, dict) else {}
+    return any(
+        str(item.get("enable", "")).startswith("mrcc_glb_acc") for item in (left_gate, right_gate)
+    )
 
 
 def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str, int]]:
     categories = (
         "memories",
+        "linker_regions",
         "interrupts",
         "ip_blocks",
         "instances",
@@ -877,6 +1377,7 @@ def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str
         "resets",
         "packages",
         "boards",
+        "global_pins",
     )
 
     def counts(value: dict[str, Any]) -> dict[str, int]:
@@ -900,6 +1401,21 @@ def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str
 
 
 def _adapter_counts(value: dict[str, Any]) -> dict[str, int]:
+    if "_rust_projection" in value:
+        projection = value["_rust_projection"]
+        return {
+            "memories": 0,
+            "linker_regions": 0,
+            "interrupts": sum(key.startswith("/interrupts/") for key in projection),
+            "ip_blocks": sum(key.startswith("/ip/") for key in projection),
+            "instances": sum(key.endswith("/address") for key in projection),
+            "dma_requests": 0,
+            "clocks": 0,
+            "resets": 0,
+            "packages": 0,
+            "boards": 0,
+            "global_pins": 0,
+        }
     peripherals = value.get("peripherals", {})
     entries = peripherals.values() if isinstance(peripherals, dict) else peripherals
     entries = list(entries)
@@ -909,6 +1425,7 @@ def _adapter_counts(value: dict[str, Any]) -> dict[str, int]:
         memories = len(next(iter(chips.values())).get("memory", []))
     return {
         "memories": memories,
+        "linker_regions": 0,
         "interrupts": len(value.get("interrupts", {})),
         "ip_blocks": 0,
         "instances": sum("address" in item for item in entries),
@@ -917,6 +1434,7 @@ def _adapter_counts(value: dict[str, Any]) -> dict[str, int]:
         "resets": 0,
         "packages": len(chips),
         "boards": 0,
+        "global_pins": len(value.get("pins", [])),
     }
 
 

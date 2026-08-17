@@ -19,6 +19,9 @@ this project adheres to date-based PEP 440 versions per ADR-0001
   comparison APIs plus the `nxp-monkey model` command group. The heterogeneous
   schema-v0 JSON boundary is recorded in the Python signoff ratchet for later
   generated-TypedDict replacement.
+- Added CMSIS/startup interrupt triangulation, separate flash/RAM linker-region
+  facts, explicit partial pin-topology scope, generated Rust register-map
+  comparison, and fail-closed reference/provenance validation for model v0.
 
 ### Changed
 

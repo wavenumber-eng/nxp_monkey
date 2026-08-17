@@ -36,9 +36,27 @@
           }
         ]
       },
+      "global_pin_scope": {
+        "provenance_refs": [
+          "fixture.sample"
+        ],
+        "value": "board-required-subset"
+      },
       "global_pins": [],
       "instances": [],
       "interrupts": [],
+      "linker_regions": [
+        {
+          "access": "rx",
+          "address": "0x00000000",
+          "image": "flash",
+          "name": "FLASH",
+          "provenance_refs": [
+            "fixture.sample"
+          ],
+          "size": 65536
+        }
+      ],
       "memories": [
         {
           "access": "rx",
@@ -129,6 +147,42 @@
       ]
     },
     {
+      "pointer": "/derivatives/0/global_pin_scope/value",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/access",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/address",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/image",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/name",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/size",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
       "pointer": "/derivatives/0/memories/0/access",
       "provenance_refs": [
         "fixture.sample"
@@ -202,7 +256,7 @@
     }
   ],
   "ip_blocks": [],
-  "model_id": "sha256:111f3c71253c4c98b0de73549e287c781d1a7c3e6ab210c8f69b083173ebd64c",
+  "model_id": "sha256:55344313e40d6610966b8ad6a68adc8aed8177c1ea2c3c1b758c44e3a2bf87c2",
   "packages": [
     {
       "bond_out_status": "unavailable",

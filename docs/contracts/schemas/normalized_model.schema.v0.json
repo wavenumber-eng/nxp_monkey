@@ -360,8 +360,10 @@
               "x-canonical-sort-key": [
                 "mode",
                 "voltage_min_mv",
+                "voltage_max_mv",
                 "temperature_max_c",
-                "max_frequency_hz"
+                "max_frequency_hz",
+                "wait_states"
               ]
             }
           },
@@ -500,6 +502,25 @@
             "name"
           ]
         },
+        "global_pin_scope": {
+          "additionalProperties": false,
+          "properties": {
+            "provenance_refs": {
+              "$ref": "#/$defs/provenance_refs"
+            },
+            "value": {
+              "enum": [
+                "board-required-subset",
+                "complete"
+              ]
+            }
+          },
+          "required": [
+            "value",
+            "provenance_refs"
+          ],
+          "type": "object"
+        },
         "interrupts": {
           "items": {
             "additionalProperties": false,
@@ -525,6 +546,51 @@
           "type": "array",
           "x-canonical-sort-key": [
             "number",
+            "name"
+          ]
+        },
+        "linker_regions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "access": {
+                "pattern": "^[rwx]+$",
+                "type": "string"
+              },
+              "address": {
+                "$ref": "#/$defs/hex_address"
+              },
+              "image": {
+                "enum": [
+                  "flash",
+                  "ram"
+                ]
+              },
+              "name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "size": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "image",
+              "address",
+              "size",
+              "access",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "address",
             "name"
           ]
         },
@@ -630,6 +696,8 @@
         "cores",
         "priority_bits",
         "memories",
+        "linker_regions",
+        "global_pin_scope",
         "global_pins",
         "instances",
         "interrupts",

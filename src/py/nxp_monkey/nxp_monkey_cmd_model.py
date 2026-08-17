@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from rich_argparse import RichHelpFormatter
 
@@ -37,12 +38,16 @@ def run_normalize(args: argparse.Namespace) -> int:
     model = normalize_model(
         lock=args.lock, cache_dir=args.cache, output=args.output, offline=args.offline
     )
-    print(args.output if args.json else model["model_id"])
+    print(str(Path(args.output).resolve()) if args.json else model["model_id"])
     return 0
 
 
 def run_compare(args: argparse.Namespace) -> int:
     """Execute ``nxp-monkey model compare``."""
     report = compare_models(left=args.left, right=args.right, output=args.output)
-    print(args.output if args.json else f"{report['summary']['total_differences']} differences")
+    print(
+        str(Path(args.output).resolve())
+        if args.json
+        else f"{report['summary']['total_differences']} differences"
+    )
     return 0

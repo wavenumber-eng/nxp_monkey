@@ -1,4 +1,5 @@
 """L99: the accepted portable-model exchange contract is fail-closed."""
+
 from __future__ import annotations
 
 import copy
@@ -9,13 +10,12 @@ from typing import Any
 
 import jsonschema
 import pytest
+from nxp_monkey.model import canonicalize_model
 
 REPO = Path(__file__).resolve().parents[2]
 SCHEMA = REPO / "docs" / "contracts" / "schemas" / "normalized_model.schema.v0.json"
 EXAMPLE = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v0.json"
-SOURCE_PROFILE_SCHEMA = (
-    REPO / "docs" / "contracts" / "schemas" / "source_profile.schema.v0.json"
-)
+SOURCE_PROFILE_SCHEMA = REPO / "docs" / "contracts" / "schemas" / "source_profile.schema.v0.json"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -24,9 +24,12 @@ def _load(path: Path) -> dict[str, Any]:
 
 def _canonical_identity(record: dict[str, Any], id_field: str) -> str:
     projected = {key: value for key, value in record.items() if key != id_field}
-    payload = json.dumps(
-        projected, ensure_ascii=False, indent=2, sort_keys=True, separators=(",", ": ")
-    ).encode("utf-8") + b"\n"
+    payload = (
+        json.dumps(
+            projected, ensure_ascii=False, indent=2, sort_keys=True, separators=(",", ": ")
+        ).encode("utf-8")
+        + b"\n"
+    )
     return f"sha256:{hashlib.sha256(payload).hexdigest()}"
 
 
@@ -102,9 +105,12 @@ def test_example_identity_is_truthful() -> None:
 def test_example_bytes_are_canonical() -> None:
     """The retained example uses the exact canonical JSON byte format."""
     example = _load(EXAMPLE)
-    expected = json.dumps(
-        example, ensure_ascii=False, indent=2, sort_keys=True, separators=(",", ": ")
-    ).encode("utf-8") + b"\n"
+    expected = (
+        json.dumps(
+            example, ensure_ascii=False, indent=2, sort_keys=True, separators=(",", ": ")
+        ).encode("utf-8")
+        + b"\n"
+    )
     assert EXAMPLE.read_bytes() == expected
 
 
@@ -116,6 +122,77 @@ def test_unordered_array_permutation_has_one_identity() -> None:
     assert _canonical_identity(
         _normalize_example_order(permuted), "model_id"
     ) == _canonical_identity(_normalize_example_order(example), "model_id")
+
+
+def test_nested_unordered_array_permutations_have_one_model_id() -> None:
+    model = _load(EXAMPLE)
+    derivative = model["derivatives"][0]
+    second_memory = copy.deepcopy(derivative["memories"][0])
+    second_memory.update(address="0x10000000", name="RAM", linker_region="RAM")
+    derivative["memories"].append(second_memory)
+    derivative["clocks"] = [
+        {
+            "id": "clock-b",
+            "kind": "mux",
+            "max_frequency_hz": None,
+            "parents": ["z", "a"],
+            "provenance_refs": ["fixture.sample"],
+            "selector": None,
+        },
+        {
+            "id": "clock-a",
+            "kind": "source",
+            "max_frequency_hz": 12000000,
+            "parents": [],
+            "provenance_refs": ["fixture.sample"],
+            "selector": None,
+        },
+    ]
+    derivative["global_pins"] = [
+        {
+            "name": "P0_3",
+            "provenance_refs": ["fixture.sample"],
+            "signals": [
+                {"mux": 3, "name": "B", "provenance_refs": ["fixture.sample"]},
+                {"mux": 2, "name": "A", "provenance_refs": ["fixture.sample"]},
+            ],
+        }
+    ]
+    second_package = copy.deepcopy(model["packages"][0])
+    second_package.update(package="QFN32", sku="MCXSAMPLEQFN32")
+    model["packages"].append(second_package)
+    model["boards"] = [
+        {
+            "device": "MCXSAMPLE",
+            "id": "board-b",
+            "package_sku": "MCXSAMPLEQFN48",
+            "provenance_refs": ["fixture.sample"],
+            "resources": [
+                {
+                    "active_level": "low",
+                    "name": "green",
+                    "pin": "P0_1",
+                    "provenance_refs": ["fixture.sample"],
+                    "type": "led",
+                }
+            ],
+        },
+        {
+            "device": "MCXSAMPLE",
+            "id": "board-a",
+            "package_sku": "MCXSAMPLEQFN48",
+            "provenance_refs": ["fixture.sample"],
+            "resources": [],
+        },
+    ]
+    permuted = copy.deepcopy(model)
+    permuted["derivatives"][0]["memories"].reverse()
+    permuted["derivatives"][0]["clocks"].reverse()
+    permuted["derivatives"][0]["clocks"][1]["parents"].reverse()
+    permuted["derivatives"][0]["global_pins"][0]["signals"].reverse()
+    permuted["packages"].reverse()
+    permuted["boards"].reverse()
+    assert canonicalize_model(model)["model_id"] == canonicalize_model(permuted)["model_id"]
 
 
 def test_example_has_field_level_provenance_coverage() -> None:
@@ -291,9 +368,7 @@ def test_mcxa_shaped_topology_is_representable(device: str) -> None:
             "pad": "P0_3",
             "position": "A1",
             "provenance_refs": ["fixture.sample"],
-            "signals": [
-                {"mux": 2, "name": "LPUART0_TX", "provenance_refs": ["fixture.sample"]}
-            ],
+            "signals": [{"mux": 2, "name": "LPUART0_TX", "provenance_refs": ["fixture.sample"]}],
             "supply": None,
         }
     ]
