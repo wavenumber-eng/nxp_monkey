@@ -1332,8 +1332,13 @@ def _selected_reproduction_key(
 def _comparison_scope(left: ModelRecord, right: ModelRecord, keys: list[str]) -> ModelRecord:
     if _is_portable_model(left) and _is_portable_model(right):
         return {
-            "inventory": "all-portable-v0-projected-facts",
-            "not_compared": [],
+            "inventory": "mcxa-portable-compatibility-v0",
+            "not_compared": [
+                "core_details",
+                "derivative_capabilities",
+                "package_pin_bondout",
+            ],
+            "pin_scope": "board-required-subset",
             "selected_fact_count": len(keys),
         }
     adapter_kind = _adapter_kind(left, right)
