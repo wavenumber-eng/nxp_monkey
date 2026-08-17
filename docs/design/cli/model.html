@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>model command</title></head>
+<body data-command="model" data-doc-status="accepted">
+  <h1>model</h1>
+  <p>
+    <code>model normalize</code> verifies a retained source lock and cache with
+    networking disabled, consumes only the lock-declared files, and writes a
+    canonical portable model. <code>--offline</code> is mandatory.
+  </p>
+  <p>
+    <code>model compare</code> compares portable model JSON or supported
+    nxp-pac adapter metadata and writes stable findings plus category coverage.
+    A difference is never silently discarded: it is either unresolved or
+    explicitly classified as a v0-scope/derivative-only fact.
+  </p>
+</body>
+</html>

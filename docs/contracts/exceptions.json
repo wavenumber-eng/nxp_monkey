@@ -18,8 +18,8 @@
       "id": "NXP-PY-SIGNOFF-RATCHET",
       "rule": "strict complexity, annotation, and Any usage limits",
       "scope": "tests/support_scripts/py_signoff_baseline.json",
-      "rationale": "Several KEX parser, fetch, and CLI wrapper functions predate the standards repo. This release records the current baseline and blocks growth in complexity, function size, missing annotations, and Any usage.",
-      "review": "Refactor baseline offenders down over time. Baseline updates should reduce counts or include explicit release-note rationale."
+      "rationale": "Several KEX parser, fetch, and CLI wrapper functions predate the standards repo. The portable-model v0 implementation adds an explicitly heterogeneous, schema-validated JSON boundary; its Any annotations are isolated to nxp_monkey.model and runtime schema/semantic checks fail closed. The baseline records both legacy and model-boundary usage and blocks further growth.",
+      "review": "Replace the portable-model JSON boundary with generated TypedDict ownership before expanding model-v0 scope; otherwise reduce existing offenders over time."
     }
   ]
 }

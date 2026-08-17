@@ -36,6 +36,7 @@
           }
         ]
       },
+      "global_pins": [],
       "instances": [],
       "interrupts": [],
       "memories": [
@@ -176,6 +177,12 @@
       ]
     },
     {
+      "pointer": "/packages/0/bond_out_status",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
       "pointer": "/packages/0/device",
       "provenance_refs": [
         "fixture.sample"
@@ -195,9 +202,10 @@
     }
   ],
   "ip_blocks": [],
-  "model_id": "sha256:a0cdd6c96eccdd3492c9e36ae792f13bc13aa0db1df9e0324c5b211982f49381",
+  "model_id": "sha256:111f3c71253c4c98b0de73549e287c781d1a7c3e6ab210c8f69b083173ebd64c",
   "packages": [
     {
+      "bond_out_status": "unavailable",
       "capabilities": [],
       "device": "MCXSAMPLE",
       "package": "QFN48",

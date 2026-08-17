@@ -19,6 +19,7 @@ from .kex_client import (
     list_versions,
     portfolio_latest_map,
 )
+from .model import ModelError, compare_models, normalize_model, validate_model_semantics
 from .models import (
     ApiVersion,
     CpuCore,
@@ -46,6 +47,7 @@ __all__ = [
     "IndexMeta",
     "KexClient",
     "NxpFetchError",
+    "ModelError",
     "PackageVariant",
     "PartDetails",
     "PartInfo",
@@ -58,6 +60,7 @@ __all__ = [
     "cache_clear",
     "cache_path",
     "cache_size",
+    "compare_models",
     "details",
     "details_from_cache",
     "fetch",
@@ -68,11 +71,13 @@ __all__ = [
     "list_families",
     "list_versions",
     "mirror_xml_tree_as_json",
+    "normalize_model",
     "open_index",
     "part_variants",
     "portfolio_latest_map",
     "resolve_source_lock",
     "search",
     "verify_source_lock",
+    "validate_model_semantics",
     "xml_file_to_dict",
 ]

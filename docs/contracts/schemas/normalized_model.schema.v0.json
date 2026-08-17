@@ -321,15 +321,24 @@
                     "$ref": "#/$defs/provenance_refs"
                   },
                   "temperature_max_c": {
-                    "type": "integer"
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "voltage_max_mv": {
                     "minimum": 1,
-                    "type": "integer"
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "voltage_min_mv": {
                     "minimum": 0,
-                    "type": "integer"
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "wait_states": {
                     "minimum": 0,
@@ -437,6 +446,57 @@
           "type": "array",
           "x-canonical-sort-key": [
             "address",
+            "name"
+          ]
+        },
+        "global_pins": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "signals": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "mux": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "provenance_refs": {
+                      "$ref": "#/$defs/provenance_refs"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "mux",
+                    "provenance_refs"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-canonical-sort-key": [
+                  "mux",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "signals",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
             "name"
           ]
         },
@@ -570,6 +630,7 @@
         "cores",
         "priority_bits",
         "memories",
+        "global_pins",
         "instances",
         "interrupts",
         "dma_requests",
@@ -700,6 +761,12 @@
     "package": {
       "additionalProperties": false,
       "properties": {
+        "bond_out_status": {
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
         "capabilities": {
           "items": {
             "$ref": "#/$defs/named_fact"
@@ -796,6 +863,7 @@
         "device",
         "sku",
         "package",
+        "bond_out_status",
         "pins",
         "capabilities",
         "provenance_refs"

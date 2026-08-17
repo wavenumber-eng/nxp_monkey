@@ -247,6 +247,34 @@
       "module": "nxp_monkey.source_lock",
       "design_doc": "docs/design/api/source_lock.html",
       "test_file": "tests/L3_public_workflows/test_source_lock.py"
+    },
+    {
+      "symbol": "ModelError",
+      "kind": "exception",
+      "module": "nxp_monkey.model",
+      "design_doc": "docs/design/api/model.html",
+      "test_file": "tests/L3_public_workflows/test_model.py"
+    },
+    {
+      "symbol": "normalize_model",
+      "kind": "function",
+      "module": "nxp_monkey.model",
+      "design_doc": "docs/design/api/model.html",
+      "test_file": "tests/L3_public_workflows/test_model.py"
+    },
+    {
+      "symbol": "compare_models",
+      "kind": "function",
+      "module": "nxp_monkey.model",
+      "design_doc": "docs/design/api/model.html",
+      "test_file": "tests/L3_public_workflows/test_model.py"
+    },
+    {
+      "symbol": "validate_model_semantics",
+      "kind": "function",
+      "module": "nxp_monkey.model",
+      "design_doc": "docs/design/api/model.html",
+      "test_file": "tests/L3_public_workflows/test_model.py"
     }
   ]
 }

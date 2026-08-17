@@ -15,6 +15,10 @@ this project adheres to date-based PEP 440 versions per ADR-0001
   verification. KEX is structurally excluded from this workflow.
 - Added public `resolve_source_lock`, `verify_source_lock`, and
   `SourceLockError` interfaces plus the `nxp-monkey source` command group.
+- Added offline portable-model normalization, semantic validation, and
+  comparison APIs plus the `nxp-monkey model` command group. The heterogeneous
+  schema-v0 JSON boundary is recorded in the Python signoff ratchet for later
+  generated-TypedDict replacement.
 
 ### Changed
 

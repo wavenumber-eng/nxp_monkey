@@ -16,6 +16,7 @@ from rich_argparse import RichHelpFormatter
 
 from ._version import __version__
 from .kex_client import NxpFetchError
+from .model import ModelError
 from .source_lock import SourceLockError
 
 # Color palette tuned to high-contrast monochrome with one accent.
@@ -113,6 +114,9 @@ def _register_commands(
         nxp_monkey_cmd_index as cmd_index,
     )
     from . import (
+        nxp_monkey_cmd_model as cmd_model,
+    )
+    from . import (
         nxp_monkey_cmd_roadmap as cmd_roadmap,
     )
     from . import (
@@ -139,6 +143,7 @@ def _register_commands(
         cmd_roadmap,
         cmd_cache,
         cmd_source,
+        cmd_model,
     ):
         module.register(subparsers)
 
@@ -174,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return int(func(args) or 0)
-    except (NxpFetchError, SourceLockError) as exc:
+    except (ModelError, NxpFetchError, SourceLockError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
