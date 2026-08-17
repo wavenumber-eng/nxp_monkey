@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp-monkey source</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp-monkey source</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / cli / source</div>
+</header>
+
+<section data-command="source" data-config-contract="docs/contracts/schemas/source_profile.schema.v0.json">
+  <h2>Purpose</h2>
+  <p>
+    Resolve an exact official MCUXpresso west manifest and verify immutable
+    source locks. Source-lock v0 accepts only open, reviewed Git inputs and
+    records KEX as <code>not-used</code>.
+  </p>
+
+  <h2>Usage</h2>
+  <pre><code>nxp-monkey source resolve \
+  --manifest-url URL --manifest-revision COMMIT \
+  --board BOARD --device DEVICE --profile-spec PROFILE.json \
+  --resolver-revision COMMIT --kex-policy not-used \
+  --cache CACHE --output LOCK.json
+
+nxp-monkey source verify --lock LOCK.json --cache CACHE --offline</code></pre>
+
+  <h2>Resolution contract</h2>
+  <p>
+    The manifest and resolver revisions must be lowercase 40-hex commits.
+    west 1.5.0 parses imports, and the pinned manifest's
+    <code>update_board --list-repo</code> command selects the board closure.
+    The resolver records all manifest projects, including explicitly
+    unavailable inactive projects, while downloading only the selected
+    closure. A reviewed profile can add exact optional manifest projects and
+    names the smaller file-level consumed closure and its license dispositions.
+  </p>
+  <p>
+    Because every active project in the supported baseline already has an
+    exact revision, <code>west manifest --resolve --active-only</code> is the
+    v0 frozen-manifest oracle. A moving active revision is rejected unless it
+    can first be resolved to an exact commit; the retained project records are
+    always exact.
+  </p>
+
+  <h2>Offline verification</h2>
+  <p>
+    Verification requires <code>--offline</code>. It recomputes the lock ID,
+    embedded-output hashes, manifest/import/board blobs, every selected commit,
+    every consumed file, and the retained license policy. Git lazy fetching is
+    disabled, so a missing object fails rather than reaching the network.
+  </p>
+
+  <h2>Determinism</h2>
+  <p>
+    Host paths use <code>${CACHE}</code>, <code>${PROFILE}</code>,
+    <code>${LOCK}</code>, and <code>${OUTPUT}</code> in the recorded command.
+    Canonical JSON contains no timestamps or temporary paths. Independent
+    clean caches must produce byte-identical locks.
+  </p>
+</section>
+</body>
+</html>

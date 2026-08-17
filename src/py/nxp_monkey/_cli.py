@@ -16,6 +16,7 @@ from rich_argparse import RichHelpFormatter
 
 from ._version import __version__
 from .kex_client import NxpFetchError
+from .source_lock import SourceLockError
 
 # Color palette tuned to high-contrast monochrome with one accent.
 # See ADR-0009 for the rationale.
@@ -77,7 +78,25 @@ def build_parser() -> argparse.ArgumentParser:
         title="commands",
         metavar="COMMAND",
     )
+    _register_commands(subparsers)
 
+    # `nxp-monkey help <cmd>` -> `nxp-monkey <cmd> --help`
+    help_parser = subparsers.add_parser(
+        "help",
+        help="Show help for another command",
+        description="Show --help for another command.",
+        formatter_class=RichHelpFormatter,
+    )
+    help_parser.add_argument("topic", nargs="?", metavar="COMMAND")
+    help_parser.set_defaults(func=_run_help, _parser_ref=parser)
+
+    return parser
+
+
+def _register_commands(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    """Import and register public commands without root parser business logic."""
     from . import (
         nxp_monkey_cmd_cache as cmd_cache,
     )
@@ -100,6 +119,9 @@ def build_parser() -> argparse.ArgumentParser:
         nxp_monkey_cmd_search as cmd_search,
     )
     from . import (
+        nxp_monkey_cmd_source as cmd_source,
+    )
+    from . import (
         nxp_monkey_cmd_version as cmd_version,
     )
     from . import (
@@ -116,20 +138,9 @@ def build_parser() -> argparse.ArgumentParser:
         cmd_details,
         cmd_roadmap,
         cmd_cache,
+        cmd_source,
     ):
         module.register(subparsers)
-
-    # `nxp-monkey help <cmd>` -> `nxp-monkey <cmd> --help`
-    help_parser = subparsers.add_parser(
-        "help",
-        help="Show help for another command",
-        description="Show --help for another command.",
-        formatter_class=RichHelpFormatter,
-    )
-    help_parser.add_argument("topic", nargs="?", metavar="COMMAND")
-    help_parser.set_defaults(func=_run_help, _parser_ref=parser)
-
-    return parser
 
 
 def _run_help(args: argparse.Namespace) -> int:
@@ -163,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return int(func(args) or 0)
-    except NxpFetchError as exc:
+    except (NxpFetchError, SourceLockError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

@@ -36,6 +36,9 @@ test = [
     "twine>=5.0.0",
     "wn-rack>=2026.6.4",
 ]
+source = [
+    "west==1.5.0",
+]
 
 [dependency-groups]
 dev = [
@@ -47,6 +50,7 @@ dev = [
     "ruff>=0.8.0",
     "twine>=5.0.0",
     "wn-rack>=2026.6.4",
+    "west==1.5.0",
 ]
 
 [project.urls]

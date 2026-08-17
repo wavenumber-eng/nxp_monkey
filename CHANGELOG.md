@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and
 this project adheres to date-based PEP 440 versions per ADR-0001
 (`YYYY.M.D[.N]`).
 
+## [Unreleased]
+
+### Added
+
+- Added the optional `source` extra, library-first official MCUXpresso west
+  manifest resolution, deterministic source-lock v0 output, and strict offline
+  verification. KEX is structurally excluded from this workflow.
+- Added public `resolve_source_lock`, `verify_source_lock`, and
+  `SourceLockError` interfaces plus the `nxp-monkey source` command group.
+
 ## [2026.6.9] - 2026-06-09
 
 ### Added
@@ -57,8 +67,7 @@ this project adheres to date-based PEP 440 versions per ADR-0001
 - `fetch` defaults to grabbing every SDK variant NXP publishes for a
   part (`ksdk2_0` + `zephyr3_2` + `i_mx_2_0`); unpublished variants
   are silently skipped. Use `--variant V` to restrict to a single
-  variant. Theme: pull everything the upstream offers, agents sort it
-  out. The Zephyr variant ships pinctrl-DT codegen scripts
+  variant. The Zephyr variant ships pinctrl-DT codegen scripts
   (`zephyr_pins_print_code.js`, `zephyr_defines_objects.js`) that
   `ksdk2_0` does not.
 - `fetch --output DIR` mirrors each fetched

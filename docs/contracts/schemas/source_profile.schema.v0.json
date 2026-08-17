@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "source_profile.schema.v0.json",
+  "title": "nxp_monkey source resolution profile v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "canonical_path",
+    "profile",
+    "manifest_label",
+    "optional_projects",
+    "license_policy",
+    "kex",
+    "consumed_sources"
+  ],
+  "properties": {
+    "schema_version": { "const": "0" },
+    "canonical_path": { "$ref": "#/$defs/relative_path" },
+    "profile": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+    "manifest_label": { "type": "string" },
+    "optional_projects": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "license_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "path", "sha256"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "minLength": 1 },
+        "path": { "$ref": "#/$defs/relative_path" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "kex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "license_evidence", "reason"],
+      "properties": {
+        "status": { "const": "not-used" },
+        "license_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "consumed_sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project",
+          "paths",
+          "license_expression",
+          "license_evidence",
+          "disposition"
+        ],
+        "properties": {
+          "project": { "type": "string", "minLength": 1 },
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/relative_path" }
+          },
+          "license_expression": { "type": "string", "minLength": 1 },
+          "license_evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "disposition": { "$ref": "#/$defs/disposition" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "relative_path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retain", "cache", "redistribute", "generate", "ai_input"],
+      "properties": {
+        "retain": { "enum": ["allow", "deny"] },
+        "cache": { "enum": ["allow", "deny"] },
+        "redistribute": { "const": "allow" },
+        "generate": { "const": "allow" },
+        "ai_input": { "const": "allow" }
+      }
+    }
+  }
+}

@@ -33,6 +33,7 @@ from .models import (
 )
 from .roadmap import build_roadmap
 from .search import part_variants, search
+from .source_lock import SourceLockError, resolve_source_lock, verify_source_lock
 from .xml_json import mirror_xml_tree_as_json, xml_file_to_dict
 
 __all__ = [
@@ -51,6 +52,7 @@ __all__ = [
     "Processor",
     "SearchHit",
     "StorageEntry",
+    "SourceLockError",
     "build_index",
     "build_roadmap",
     "cache_clear",
@@ -69,6 +71,8 @@ __all__ = [
     "open_index",
     "part_variants",
     "portfolio_latest_map",
+    "resolve_source_lock",
     "search",
+    "verify_source_lock",
     "xml_file_to_dict",
 ]

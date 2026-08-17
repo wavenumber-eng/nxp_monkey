@@ -55,3 +55,11 @@ def test_command_design_doc_exists_with_data_attr(entry):
     assert re.search(
         rf'data-command="{re.escape(entry["name"])}"', text
     ), f"design doc {design_path} is missing data-command=\"{entry['name']}\""
+
+
+@pytest.mark.parametrize(
+    "entry", [entry for entry in _load_manifest()["commands"] if entry["config_contract"] != "none"]
+)
+def test_command_config_contract_exists(entry):
+    """Commands with configuration name an existing retained contract."""
+    assert (REPO / entry["config_contract"]).is_file()

@@ -33,14 +33,17 @@ derived views to an AI system without written NXP permission.
 
 ADR-0010 also defines a staged expansion for reproducible official
 MCUXpresso SDK manifest resolution, immutable source-lock verification, and a
-portable silicon/package/board model. Those source/model commands are not part
-of the released CLI until their implementation, public contracts, and tests
+portable silicon/package/board model. The optional <code>source</code> extra
+provides exact Git-only source resolution and offline lock verification. The
+portable model commands remain staged until their implementation and tests
 land together.
 
 ## Install
 
 ```powershell
 uv tool install nxp-monkey
+# Include official west-manifest resolution:
+uv tool install "nxp-monkey[source]"
 uv tool update-shell
 nxp-monkey --version
 nxp-monkey version
@@ -84,6 +87,10 @@ nxp-monkey roadmap MCXA156
 nxp-monkey cache path
 nxp-monkey cache size
 nxp-monkey cache clear
+
+# Resolve exact open Git sources; KEX is always excluded from lock v0.
+nxp-monkey source resolve --help
+nxp-monkey source verify --help
 ```
 
 ## What you get from `fetch MCXA156`
@@ -151,6 +158,12 @@ info = nxp_monkey.get_part("MCXA156")     # -> PartInfo dataclass
 path = nxp_monkey.fetch("MIMX9352CVVXMAB") # -> pathlib.Path to unpacked tree
 details = nxp_monkey.details("MCXA156")   # -> PartDetails (header, cores, variants)
 roadmap = nxp_monkey.build_roadmap(path)  # -> dict (guide, key_files, xml_namespaces, ...)
+
+# Official Git source locking (requires the source extra)
+lock = nxp_monkey.resolve_source_lock(...)
+result = nxp_monkey.verify_source_lock(
+    lock="source-lock.json", cache_dir="cache", offline=True
+)
 
 # Cache control
 nxp_monkey.cache_path()

@@ -226,6 +226,27 @@
       "module": "nxp_monkey.xml_json",
       "design_doc": "docs/design/api/xml_json.html",
       "test_file": "tests/L3_public_workflows/test_xml_json.py"
+    },
+    {
+      "symbol": "SourceLockError",
+      "kind": "exception",
+      "module": "nxp_monkey.source_lock",
+      "design_doc": "docs/design/api/source_lock.html",
+      "test_file": "tests/L3_public_workflows/test_source_lock.py"
+    },
+    {
+      "symbol": "resolve_source_lock",
+      "kind": "function",
+      "module": "nxp_monkey.source_lock",
+      "design_doc": "docs/design/api/source_lock.html",
+      "test_file": "tests/L3_public_workflows/test_source_lock.py"
+    },
+    {
+      "symbol": "verify_source_lock",
+      "kind": "function",
+      "module": "nxp_monkey.source_lock",
+      "design_doc": "docs/design/api/source_lock.html",
+      "test_file": "tests/L3_public_workflows/test_source_lock.py"
     }
   ]
 }

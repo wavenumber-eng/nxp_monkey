@@ -28,7 +28,7 @@
   <ul>
     <li>requested device, board, and profile;</li>
     <li>exact manifest URL, commit, content hashes, west version and commands;</li>
-    <li>recursive imports, group filters, complete project inventory, and freeze output;</li>
+    <li>recursive imports, group filters, complete project inventory, and frozen active-manifest output;</li>
     <li>full board-reference and consumed-input closures;</li>
     <li>KEX disposition and governing-license evidence; endpoint/tool/hash fields only when policy permits its use;</li>
     <li>license-policy revision and per-input disposition references; and</li>
@@ -37,7 +37,11 @@
   <p>
     Resolution requires an exact commit and delegates recursive-import and
     selection semantics to the pinned manifest's west extension plus west's
-    parser. Verification checks every commit and hash. Offline verification
+    parser. The supported baseline records west's resolved active-manifest
+    output as frozen because every included revision is already exact;
+    inaccessible moving entries in inactive groups retain an explicit
+    unavailable status and cannot be selected. Verification checks every
+    selected commit and hash. Offline verification
     performs no DNS or HTTP access.
   </p>
 </section>
@@ -112,7 +116,7 @@
     with only its own ID field omitted: <code>lock_id</code>,
     <code>model_id</code>, <code>manifest_id</code>, or
     <code>override_set_id</code>. Command arrays preserve argument order and use
-    literal <code>${CACHE}</code>, <code>${LOCK}</code>, and
+    literal <code>${CACHE}</code>, <code>${PROFILE}</code>, <code>${LOCK}</code>, and
     <code>${OUTPUT}</code> tokens instead of host paths.
   </p>
   <p>Unordered arrays use these stable keys:</p>

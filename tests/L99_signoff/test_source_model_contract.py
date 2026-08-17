@@ -13,6 +13,9 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 SCHEMA = REPO / "docs" / "contracts" / "schemas" / "normalized_model.schema.v0.json"
 EXAMPLE = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v0.json"
+SOURCE_PROFILE_SCHEMA = (
+    REPO / "docs" / "contracts" / "schemas" / "source_profile.schema.v0.json"
+)
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -78,6 +81,11 @@ def _assert_rejected(instance: dict[str, Any]) -> None:
 def test_normalized_model_schema_is_valid() -> None:
     """The normalized-model schema is a valid Draft 2020-12 schema."""
     jsonschema.Draft202012Validator.check_schema(_load(SCHEMA))
+
+
+def test_source_profile_schema_is_valid() -> None:
+    """The public source resolution profile is a valid Draft 2020-12 schema."""
+    jsonschema.Draft202012Validator.check_schema(_load(SOURCE_PROFILE_SCHEMA))
 
 
 def test_normalized_model_example_validates() -> None:

@@ -56,6 +56,12 @@
       "summary": "Inspect and manage the on-disk cache"
     },
     {
+      "config_contract": "docs/contracts/schemas/source_profile.schema.v0.json",
+      "design_doc": "docs/design/cli/source.html",
+      "name": "source",
+      "summary": "Resolve and verify immutable official-source locks"
+    },
+    {
       "config_contract": "none",
       "design_doc": "docs/design/cli/help.html",
       "name": "help",

@@ -59,7 +59,8 @@ The v0 replay command surface is:
 nxp-monkey source resolve `
   --manifest-url https://github.com/nxp-mcuxpresso/mcuxsdk-manifests.git `
   --manifest-revision <40-hex-commit> `
-  --board <board-id> --device <device-id> --profile <profile-id> `
+  --board <board-id> --device <device-id> --profile-spec <profile.json> `
+  --resolver-revision <40-hex-commit> `
   --kex-policy not-used --cache <cache-directory> --output <lock.json>
 
 nxp-monkey source verify `
@@ -76,7 +77,7 @@ nxp-monkey model compare `
 `--manifest-revision` accepts only an exact commit. `--kex-policy not-used` is
 the only permitted v0 value in this AI-assisted program. Recorded command
 templates represent operational paths only with the literal tokens `${CACHE}`,
-`${LOCK}`, and `${OUTPUT}`; host paths never enter canonical content. Resolve writes
+`${PROFILE}`, `${LOCK}`, and `${OUTPUT}`; host paths never enter canonical content. Resolve writes
 only the requested lock; verify emits no modified lock. `--offline` forbids all
 DNS, HTTP, and git fetch operations and fails if any required object or blob is
 absent. The implementation slice may add presentation flags but may not weaken
@@ -91,6 +92,14 @@ manifest's own `west update_board --set ... --list-repo` behavior and west's
 manifest parser/freeze behavior as the selection oracle. It does not maintain
 an independent implementation of recursive west import or group-filter
 semantics.
+
+For the v26.06.00-LTS baseline, every active project revision is an exact
+commit, so v0 records `west manifest --resolve --active-only` as the frozen
+active-manifest output without cloning unrelated repositories. The four
+inaccessible moving revisions are in excluded groups; the complete inventory
+marks them `unavailable-inactive` with no invented commit, and the resolver
+forbids selecting or consuming them. A future baseline with a moving active
+revision requires exact resolution or a contract revision.
 
 The lock records the complete parsed project inventory, the full board
 reference closure (including optional projects), and the narrower consumed

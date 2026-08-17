@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nxp_monkey.source_lock</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<header>
+  <h1>nxp_monkey.source_lock</h1>
+  <div class="crumbs"><a href="../index.html">design</a> / api / source_lock</div>
+</header>
+
+<section data-interface="SourceLockError" data-test-file="tests/L3_public_workflows/test_source_lock.py">
+  <h2>SourceLockError</h2>
+  <p><strong>Kind:</strong> exception.</p>
+  <p>Reports fail-closed source resolution and replay errors.</p>
+</section>
+
+<section data-interface="resolve_source_lock" data-test-file="tests/L3_public_workflows/test_source_lock.py">
+  <h2>resolve_source_lock</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Resolves a pinned official manifest, board closure, exact selected commits,
+    reviewed consumed files, and license evidence into canonical source-lock
+    v0 JSON. The function writes only the requested output and reusable Git and
+    policy cache objects.
+  </p>
+</section>
+
+<section data-interface="verify_source_lock" data-test-file="tests/L3_public_workflows/test_source_lock.py">
+  <h2>verify_source_lock</h2>
+  <p><strong>Kind:</strong> function.</p>
+  <p>
+    Recomputes source-lock identity and verifies all retained Git objects,
+    blobs, and license policy bytes. V0 requires explicit offline mode and
+    never repairs or fetches a missing cache object.
+  </p>
+</section>
+</body>
+</html>
