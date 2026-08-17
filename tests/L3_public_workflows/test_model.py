@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: E501
+import argparse
 import copy
 import hashlib
 import json
@@ -10,9 +11,10 @@ from pathlib import Path
 import nxp_monkey.model as model_module
 import pytest
 from nxp_monkey import ModelError, compare_models, normalize_model, validate_model_semantics
+from nxp_monkey.nxp_monkey_cmd_model import run_compare
 
 REPO = Path(__file__).resolve().parents[2]
-EXAMPLE = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v0.json"
+EXAMPLE = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v1.json"
 
 
 def _example() -> dict:
@@ -78,6 +80,49 @@ def test_runtime_validation_rejects_dangling_clock_reference() -> None:
         validate_model_semantics(malformed)
 
 
+def test_runtime_validation_rejects_duplicate_instance_name() -> None:
+    malformed = _example()
+    derivative = malformed["derivatives"][0]
+    duplicate = {
+        "address": "0x40000000",
+        "clock_ids": [],
+        "gate": None,
+        "ip_block_id": "missing",
+        "name": "GPIO0",
+        "provenance_refs": ["fixture.sample"],
+        "reset_ids": [],
+    }
+    derivative["instances"].append(copy.deepcopy(duplicate))
+    duplicate["address"] = "0x40001000"
+    derivative["instances"].append(duplicate)
+    malformed = model_module.canonicalize_model(malformed)
+    with pytest.raises(ModelError, match="duplicate instances name"):
+        validate_model_semantics(malformed)
+
+
+def test_runtime_validation_rejects_missing_clock_parent_and_memory_core() -> None:
+    malformed = _example()
+    derivative = malformed["derivatives"][0]
+    derivative["clocks"] = [
+        {
+            "id": "mux",
+            "kind": "mux",
+            "max_frequency_hz": None,
+            "parents": ["missing"],
+            "provenance_refs": ["fixture.sample"],
+            "selector": None,
+        }
+    ]
+    malformed = model_module.canonicalize_model(malformed)
+    with pytest.raises(ModelError, match="missing parent"):
+        validate_model_semantics(malformed)
+    malformed = _example()
+    malformed["derivatives"][0]["memories"][0]["cores"] = ["missing"]
+    malformed = model_module.canonicalize_model(malformed)
+    with pytest.raises(ModelError, match="missing core"):
+        validate_model_semantics(malformed)
+
+
 def test_normalization_requires_offline_before_reading_inputs(tmp_path: Path) -> None:
     with pytest.raises(ModelError, match="requires --offline"):
         normalize_model(
@@ -102,6 +147,12 @@ def test_compare_equal_models_is_canonical(tmp_path: Path) -> None:
     assert json.loads(output.read_text(encoding="utf-8")) == report
 
 
+def test_compare_rejects_legacy_v0_without_reinterpretation(tmp_path: Path) -> None:
+    legacy = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v0.json"
+    with pytest.raises(ModelError, match="re-normalize"):
+        compare_models(left=legacy, right=legacy, output=tmp_path / "report.json")
+
+
 def test_compare_classifies_portable_model_compatibility(tmp_path: Path) -> None:
     left = _example()
     right = copy.deepcopy(left)
@@ -113,7 +164,7 @@ def test_compare_classifies_portable_model_compatibility(tmp_path: Path) -> None
     report = compare_models(left=left_path, right=right_path, output=tmp_path / "report.json")
     assert report["summary"]["unclassified"] == 0
     assert report["findings"][0]["field"] == "/priority_bits"
-    assert report["findings"][0]["classification"] == "curated-compatible"
+    assert report["findings"][0]["classification"] == "incompatible"
 
 
 def test_compare_keeps_adapter_mismatch_unresolved(tmp_path: Path) -> None:
@@ -126,6 +177,10 @@ def test_compare_keeps_adapter_mismatch_unresolved(tmp_path: Path) -> None:
     assert report["summary"]["unclassified"] == 2
     mismatch = next(item for item in report["findings"] if item["field"] == "/priority_bits")
     assert mismatch["classification"] == "mismatch"
+    args = argparse.Namespace(
+        json=False, left=EXAMPLE, right=adapter, output=tmp_path / "cli-report.json"
+    )
+    assert run_compare(args) == 2
 
 
 def test_reproduction_inventory_does_not_shrink_with_portable_projection() -> None:
@@ -135,13 +190,35 @@ def test_reproduction_inventory_does_not_shrink_with_portable_projection() -> No
     portable_projection = copy.deepcopy(adapter_projection)
     portable_projection.pop("/instances/GPIO0/address")
     keys = model_module._comparison_keys(
-        {"schema_version": "0", "derivatives": [{"device": "MCXA266"}]},
+        {"schema_version": "1", "derivatives": [{"device": "MCXA266"}]},
         {"_adapter_kind": "metadata"},
         portable_projection,
         adapter_projection,
     )
     assert len(keys) == 50
     assert "/instances/GPIO0/address" in keys
+
+
+def test_register_map_rule_is_exact_and_startup_slots_are_numbered() -> None:
+    field = "/ip/GPIO0/register_map"
+    expected = model_module._KNOWN_REGISTER_MAP_DIFFERENCES[field]
+    left = {"count": expected[0][0], "sha256": "sha256:" + expected[0][1]}
+    right = {"count": expected[1][0], "sha256": "sha256:" + expected[1][1]}
+    assert model_module._is_evidence_backed_reproduction_difference(field, left, right)
+    right["count"] += 1
+    assert not model_module._is_evidence_backed_reproduction_difference(field, left, right)
+    startup = "LPUART0_IRQHandler, // 47 : UART\nGPIO3_IRQHandler, // 90 : GPIO\n"
+    assert model_module._startup_interrupts(startup) == {"LPUART0": 31, "GPIO3": 74}
+
+
+def test_dma_controller_identity_is_consumed() -> None:
+    rows = model_module._dma(
+        "kDma1RequestLPUART0Rx = 21U\nkDma1RequestLPUART0Tx = 22U",
+        "fixture.dma",
+        "#define FSL_EDMA_SOC_IP_DMA3 (1)",
+        "fixture.soc",
+    )
+    assert {item["controller"] for item in rows} == {"DMA1"}
 
 
 def test_compare_accepts_generated_nxp_pac_rust(tmp_path: Path) -> None:
@@ -170,7 +247,7 @@ def test_synthetic_offline_normalization_exercises_primary_sources(
         "MCXA/MCXA156/chip.yml": "device.hardware_data:\n  contents:\n    devices:\n      - frequency_mhz: 48\n        core:\n          - {name: cm33, type: cm33, fpu: NO_FPU}\n        memory:\n          memoryBlock:\n            - {name: PROGRAM_FLASH, addr: 0, size: 65536, type: Flash, access: RO}\n        part:\n          - {name: MCXA156VLL}\n",
         "svd/MCXA156.xml": "<device><cpu><nvicPrioBits>3</nvicPrioBits></cpu><peripherals>\n<peripheral><name>DMA0</name><baseAddress>0x40080000</baseAddress><registers><register><name>CSR</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>GPIO3</name><baseAddress>0x40105000</baseAddress><interrupt><name>GPIO3</name><value>74</value></interrupt><registers><register><name>PDOR</name><addressOffset>0x40</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>PORT0</name><baseAddress>0x400BC000</baseAddress><registers><register><name>PCR0</name><addressOffset>0x80</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>LPUART0</name><baseAddress>0x4009F000</baseAddress><interrupt><name>LPUART0</name><value>31</value></interrupt><registers><register><name>CTRL</name><addressOffset>0x18</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>OSTIMER0</name><baseAddress>0x400AD000</baseAddress><registers><register><name>CTRL</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>MRCC0</name><baseAddress>0x40091000</baseAddress><registers><register><name>CC0</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>SCG0</name><baseAddress>0x4008F000</baseAddress><registers><register><name>CSR</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n</peripherals></device>",
         "MCXA/MCXA156/MCXA156_COMMON.h": "#define __NVIC_PRIO_BITS 3U\ntypedef enum IRQn {\nLPUART0_IRQn = 31,\nGPIO3_IRQn = 74\n} IRQn_Type;\n",
-        "MCXA/MCXA156/gcc/startup_MCXA156.S": ".long LPUART0_IRQHandler\n.long GPIO3_IRQHandler\n",
+        "MCXA/MCXA156/gcc/startup_MCXA156.S": "__Vectors[] = {\nLPUART0_IRQHandler, // 47 : LPUART0\nGPIO3_IRQHandler, // 90 : GPIO3\n};\n",
         "MCXA/MCXA156/gcc/MCXA156_flash.ld": "MEMORY {\n m_text (RX) : ORIGIN = 0x0, LENGTH = 0x10000\n}\n",
         "MCXA/MCXA156/gcc/MCXA156_ram.ld": "MEMORY {\n m_data (RW) : ORIGIN = 0x20000000, LENGTH = 0x1000\n}\n",
         "MCXA/MCXA156/drivers/fsl_clock.h": "kCLOCK_GateDMA0 = (0x0U << 16U) | (1U)), /*!< Clock gate name:\nkCLOCK_GateGPIO3 = (0x2U << 16U) | (7U)), /*!< Clock gate name:\nkCLOCK_GatePORT0 = (0x1U << 16U) | (12U)), /*!< Clock gate name:\nkCLOCK_GateLPUART0 = (0x0U << 16U) | (23U)), /*!< Clock gate name:\nkCLOCK_GateOSTIMER0 = (0x1U << 16U) | (1U)), /*!< Clock gate name:\nkFRO12M_to_LPUART0 = 1,\n",
@@ -178,9 +255,9 @@ def test_synthetic_offline_normalization_exercises_primary_sources(
         "MCXA/MCXA156/variable.cmake": "set(soc_periph periph1)",
         "MCXA/periph1/PERI_DMA.h": "kDma0RequestLPUART0Rx = 21U\nkDma0RequestLPUART0Tx = 22U",
         "MCXA/MCXA156/drivers/fsl_edma_soc.h": "#define FSL_EDMA_SOC_IP_DMA3 (1)",
-        "boards/frdmmcxa156/demo_apps/hello_world/pin_mux.c": "/* package_id: MCXA156VLL */\nconst port_pin_config_t port0_2_pin1_config = { /* Pin is configured as LPUART0_RXD */ kPORT_MuxAlt2 };\nconst port_pin_config_t port0_3_pin2_config = { /* Pin is configured as LPUART0_TXD */ kPORT_MuxAlt2 };\n",
-        "boards/frdmmcxa156/board.h": "#define BOARD_DEBUG_UART_BASEADDR (uint32_t) LPUART0\n#define BOARD_DEBUG_UART_BAUDRATE 115200U\n#define BOARD_LED_GREEN_GPIO GPIO3\n#define BOARD_LED_GREEN_GPIO_PIN 13U\n",
-        "boards/frdmmcxa156/clock_config.c": "Configuration BOARD_BootClockFRO48M\nFMU_FCTRL_RWSC(0x0U)\n",
+        "boards/frdmmcxa156/common/pin_mux/pin_mux.c": "/* package_id: MCXA156VLL */\nconst port_pin_config_t DEBUG_RX = { kPORT_MuxAlt2 };\n/* PORT0_2 is configured as LPUART0_RXD */\nconst port_pin_config_t DEBUG_TX = { kPORT_MuxAlt2 };\n/* PORT0_3 is configured as LPUART0_TXD */\nconst port_pin_config_t LED_GREEN = { kPORT_MuxAlt0 };\n/* PORT3_13 is configured as P3_13 */\n",
+        "boards/frdmmcxa156/board.h": "#define BOARD_DEBUG_UART_BASEADDR (uint32_t) LPUART0\n#define BOARD_DEBUG_UART_BAUDRATE 115200U\n#define BOARD_LED_GREEN_GPIO GPIO3\n#define BOARD_LED_GREEN_GPIO_PIN 13U\n#define LOGIC_LED_ON 0U\n",
+        "boards/frdmmcxa156/clock_config.c": "Configuration BOARD_BootClockFRO12M\nFMU_FCTRL_RWSC(0x0U)\nConfiguration BOARD_BootClockFRO24M\nFMU_FCTRL_RWSC(0x0U)\nConfiguration BOARD_BootClockFRO48M\nFMU_FCTRL_RWSC(0x0U)\nConfiguration BOARD_BootClockFRO64M\nFMU_FCTRL_RWSC(0x1U)\nConfiguration BOARD_BootClockFRO96M\nFMU_FCTRL_RWSC(0x2U)\n",
     }
     work = tmp_path / "work"
     work.mkdir()
@@ -237,3 +314,16 @@ def test_synthetic_offline_normalization_exercises_primary_sources(
     assert {item["image"] for item in derivative["linker_regions"]} == {"flash", "ram"}
     assert derivative["global_pin_scope"]["value"] == "board-required-subset"
     assert {item["name"] for item in derivative["global_pins"]} == {"P0_2", "P0_3", "P3_13"}
+    assert all(item["max_frequency_hz"] is None for item in derivative["clocks"])
+    provenance = {item["input_path"]: item["source_kind"] for item in model["provenance"]}
+    assert provenance["MCXA/MCXA156/MCXA156_COMMON.h"] == "cmsis"
+    assert provenance["MCXA/MCXA156/drivers/fsl_clock.h"] == "sdk"
+    led = next(item for item in model["boards"][0]["resources"] if item["type"] == "led")
+    pin = next(item for item in derivative["global_pins"] if item["name"] == led["pin"])
+    assert pin["signals"][0]["provenance_refs"] != led["provenance_refs"]
+    malformed = copy.deepcopy(model)
+    uart = next(item for item in malformed["boards"][0]["resources"] if item["type"] == "uart")
+    uart["rx"]["mux"] = 9
+    malformed = model_module.canonicalize_model(malformed)
+    with pytest.raises(ModelError, match="pin signal or mux"):
+        validate_model_semantics(malformed)

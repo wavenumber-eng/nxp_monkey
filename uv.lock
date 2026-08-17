@@ -312,7 +312,9 @@ name = "nxp-monkey"
 version = "2026.6.9"
 source = { editable = "." }
 dependencies = [
+    { name = "jsonschema" },
     { name = "platformdirs" },
+    { name = "pyyaml" },
     { name = "rich" },
     { name = "rich-argparse" },
 ]
@@ -348,11 +350,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'test'", specifier = ">=1.2.0" },
+    { name = "jsonschema", specifier = ">=4.0.0" },
     { name = "jsonschema", marker = "extra == 'test'", specifier = ">=4.0.0" },
     { name = "platformdirs", specifier = ">=4.0.0" },
     { name = "pyright", marker = "extra == 'test'", specifier = ">=1.1.390" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
     { name = "pytest-json-report", marker = "extra == 'test'", specifier = ">=1.5.0" },
+    { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "rich-argparse", specifier = ">=1.5.0" },
     { name = "ruff", marker = "extra == 'test'", specifier = ">=0.8.0" },

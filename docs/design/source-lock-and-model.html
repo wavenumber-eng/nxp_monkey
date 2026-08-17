@@ -14,9 +14,9 @@
 <section>
   <h2>Purpose</h2>
   <p>
-    Define the version-zero exchange boundary for resolving official NXP
-    sources, verifying immutable source locks, and building a downstream-neutral
-    model. ADR-0010 owns the package boundary. The NXP Rust enablement
+    Define the version-zero source-lock boundary and version-one portable-model
+    boundary for resolving official NXP sources, verifying immutable locks, and
+    building a downstream-neutral model. ADR-0010 owns the package boundary. The NXP Rust enablement
     coordination repository owns source-lock, generation-manifest, and
     override-set schemas. NXP Monkey owns normalized-model schema and migration.
   </p>
@@ -49,7 +49,7 @@
 </section>
 
 <section>
-  <h2>Portable model v0</h2>
+  <h2>Portable model v1</h2>
   <p>The model has four layers with field-level provenance:</p>
   <ol>
     <li>peripheral IP and register blocks;</li>
@@ -59,10 +59,10 @@
     <li>board wiring and resources.</li>
   </ol>
   <p>
-    V0 excludes account-gated NXP data sheets, schematics, and design archives
+    Model v1 excludes account-gated NXP data sheets, schematics, and design archives
     because no open-source or AI-input permission is retained. It preserves
     open-source package identifiers without inventing per-package bond-out.
-    No permitted v0 source provides complete global pin topology, so every
+    No permitted model-v1 source provides complete global pin topology, so every
     derivative declares its pin scope explicitly; the MCXA board increment is
     <code>board-required-subset</code>, not a complete topology claim. Board
     wiring is sourced from the open-licensed BSP and must be confirmed by
@@ -73,8 +73,16 @@
     priority bits, memories/linker regions, interrupts, GPIO, clocks/resets,
     flash timing, OSTIMER, LPUART0, relevant DMA relationships, capabilities,
     and LED/VCOM pins. This narrow automation scope does not authorize an
-    incomplete downstream PAC. Non-v0 PAC fields must be separately inventoried
+    incomplete downstream PAC. Non-v1 PAC fields must be separately inventoried
     as carried/reused in the generation manifest.
+  </p>
+  <p>
+    Accepted schema v0 remains immutable. Model v1 adds explicit linker
+    conditions, pin-scope policy, source-versus-policy provenance, and truthful
+    flash timing bases. Because those facts cannot be inferred from a serialized
+    v0 model, migration is fail-closed: retain the v0 artifact and re-normalize
+    its immutable source lock with the v1 generator. Runtime model APIs reject
+    v0 rather than silently reinterpret it.
   </p>
   <p>
     Physical memory inventory and executable integration layout are distinct:
@@ -93,6 +101,17 @@
     exact derivative package identifiers, and the three board-required
     LED/VCOM pin signals. A comparison oracle missing any required key fails
     closed; a model missing one emits an unresolved finding.
+  </p>
+  <p>
+    Reproduction representation rules are exact-value allowlists, not path-wide
+    classifications. Generated-Rust rules bind both measured register-map
+    signatures for each reviewed IP, accounting for generic PAC modules versus
+    derivative-specific SVD availability; any count or hash change is
+    unresolved. Gate rules bind the exact CC-versus-ACC spelling and reviewed
+    PAC adapter configuration names. Portable compatibility is conservative:
+    exact facts are reusable, every known non-exact path is incompatible, and a
+    new path is unresolved. Findings retain an owner, both model/source-lock
+    identities, and competing source locators.
   </p>
 </section>
 

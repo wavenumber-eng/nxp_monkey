@@ -310,7 +310,13 @@
               "items": {
                 "additionalProperties": false,
                 "properties": {
-                  "max_frequency_hz": {
+                  "basis": {
+                    "enum": [
+                      "configured",
+                      "upper-bound"
+                    ]
+                  },
+                  "frequency_hz": {
                     "minimum": 1,
                     "type": "integer"
                   },
@@ -321,15 +327,24 @@
                     "$ref": "#/$defs/provenance_refs"
                   },
                   "temperature_max_c": {
-                    "type": "integer"
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "voltage_max_mv": {
                     "minimum": 1,
-                    "type": "integer"
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "voltage_min_mv": {
                     "minimum": 0,
-                    "type": "integer"
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "wait_states": {
                     "minimum": 0,
@@ -341,7 +356,8 @@
                   "voltage_max_mv",
                   "temperature_max_c",
                   "mode",
-                  "max_frequency_hz",
+                  "basis",
+                  "frequency_hz",
                   "wait_states",
                   "provenance_refs"
                 ],
@@ -350,9 +366,12 @@
               "type": "array",
               "x-canonical-sort-key": [
                 "mode",
+                "basis",
                 "voltage_min_mv",
+                "voltage_max_mv",
                 "temperature_max_c",
-                "max_frequency_hz"
+                "frequency_hz",
+                "wait_states"
               ]
             }
           },
@@ -440,6 +459,76 @@
             "name"
           ]
         },
+        "global_pins": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "signals": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "mux": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "provenance_refs": {
+                      "$ref": "#/$defs/provenance_refs"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "mux",
+                    "provenance_refs"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-canonical-sort-key": [
+                  "mux",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "signals",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "name"
+          ]
+        },
+        "global_pin_scope": {
+          "additionalProperties": false,
+          "properties": {
+            "provenance_refs": {
+              "$ref": "#/$defs/provenance_refs"
+            },
+            "value": {
+              "enum": [
+                "board-required-subset",
+                "complete"
+              ]
+            }
+          },
+          "required": [
+            "value",
+            "provenance_refs"
+          ],
+          "type": "object"
+        },
         "interrupts": {
           "items": {
             "additionalProperties": false,
@@ -466,6 +555,59 @@
           "x-canonical-sort-key": [
             "number",
             "name"
+          ]
+        },
+        "linker_regions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "access": {
+                "pattern": "^[rwx]+$",
+                "type": "string"
+              },
+              "address": {
+                "$ref": "#/$defs/hex_address"
+              },
+              "condition": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "image": {
+                "enum": [
+                  "flash",
+                  "ram"
+                ]
+              },
+              "name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "provenance_refs": {
+                "$ref": "#/$defs/provenance_refs"
+              },
+              "size": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "image",
+              "address",
+              "size",
+              "access",
+              "condition",
+              "provenance_refs"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-canonical-sort-key": [
+            "address",
+            "name",
+            "condition"
           ]
         },
         "memories": {
@@ -570,6 +712,9 @@
         "cores",
         "priority_bits",
         "memories",
+        "linker_regions",
+        "global_pin_scope",
+        "global_pins",
         "instances",
         "interrupts",
         "dma_requests",
@@ -700,6 +845,12 @@
     "package": {
       "additionalProperties": false,
       "properties": {
+        "bond_out_status": {
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
         "capabilities": {
           "items": {
             "$ref": "#/$defs/named_fact"
@@ -796,6 +947,7 @@
         "device",
         "sku",
         "package",
+        "bond_out_status",
         "pins",
         "capabilities",
         "provenance_refs"
@@ -847,7 +999,8 @@
             "cmsis",
             "schematic",
             "observation",
-            "override"
+            "override",
+            "policy"
           ]
         },
         "source_lock_id": {
@@ -856,7 +1009,6 @@
       },
       "required": [
         "id",
-        "source_lock_id",
         "project",
         "source_kind",
         "input_path",
@@ -1081,17 +1233,12 @@
         "rx",
         "tx",
         "baud",
-        "data_bits",
-        "parity",
-        "stop_bits",
-        "flow_control",
-        "transport",
         "provenance_refs"
       ],
       "type": "object"
     }
   },
-  "$id": "https://wavenumber-eng.github.io/nxp_monkey/contracts/normalized_model.schema.v0.json",
+  "$id": "https://wavenumber-eng.github.io/nxp_monkey/contracts/normalized_model.schema.v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -1121,6 +1268,7 @@
         "$ref": "#/$defs/derivative"
       },
       "minItems": 1,
+      "maxItems": 1,
       "type": "array",
       "x-canonical-sort-key": [
         "device"
@@ -1170,7 +1318,7 @@
       ]
     },
     "schema_version": {
-      "const": "0"
+      "const": "1"
     },
     "source_lock_ids": {
       "items": {
@@ -1197,6 +1345,6 @@
     "fact_provenance",
     "conflicts"
   ],
-  "title": "NXP portable normalized model v0",
+  "title": "NXP portable normalized model v1",
   "type": "object"
 }

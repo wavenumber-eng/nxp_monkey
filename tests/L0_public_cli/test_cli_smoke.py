@@ -7,6 +7,7 @@ These tests do not hit the network. They verify that:
 - every public subcommand accepts ``--help`` and exits 0;
 - the root parser dispatches the ``help <cmd>`` alias.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,8 @@ PUBLIC_COMMANDS = (
     "fetch",
     "details",
     "cache",
+    "source",
+    "model",
     "help",
 )
 

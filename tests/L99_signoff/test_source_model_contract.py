@@ -13,8 +13,8 @@ import pytest
 from nxp_monkey.model import canonicalize_model
 
 REPO = Path(__file__).resolve().parents[2]
-SCHEMA = REPO / "docs" / "contracts" / "schemas" / "normalized_model.schema.v0.json"
-EXAMPLE = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v0.json"
+SCHEMA = REPO / "docs" / "contracts" / "schemas" / "normalized_model.schema.v1.json"
+EXAMPLE = REPO / "docs" / "contracts" / "examples" / "normalized_model.example.v1.json"
 SOURCE_PROFILE_SCHEMA = REPO / "docs" / "contracts" / "schemas" / "source_profile.schema.v0.json"
 
 
@@ -92,7 +92,7 @@ def test_source_profile_schema_is_valid() -> None:
 
 
 def test_normalized_model_example_validates() -> None:
-    """The synthetic contract example validates against model schema v0."""
+    """The synthetic contract example validates against model schema v1."""
     jsonschema.validate(_load(EXAMPLE), _load(SCHEMA))
 
 
@@ -224,7 +224,7 @@ def test_absolute_provenance_path_is_rejected() -> None:
     _assert_rejected(malformed)
 
 
-def test_kex_provenance_is_rejected_in_v0() -> None:
+def test_kex_provenance_is_rejected_in_v1() -> None:
     malformed = _load(EXAMPLE)
     malformed["provenance"][0]["source_kind"] = "kex"
     _assert_rejected(malformed)
@@ -278,7 +278,7 @@ def test_mismatch_requires_two_source_values() -> None:
 
 @pytest.mark.parametrize("device", ["MCXA156SAMPLE", "MCXA266SAMPLE"])
 def test_mcxa_shaped_topology_is_representable(device: str) -> None:
-    """The v0 types carry the MCXA PAC/Embassy topology categories."""
+    """The v1 types carry the MCXA PAC/Embassy topology categories."""
     shaped = _load(EXAMPLE)
     shaped["derivatives"][0]["device"] = device
     shaped["derivatives"][0]["clocks"] = [

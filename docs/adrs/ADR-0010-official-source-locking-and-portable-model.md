@@ -231,3 +231,6 @@ and the file-level license evidence used for that resolution.
   manifest entries, offline fixtures, and Rack tests under ADR-0005.
 - Schema-breaking changes require a new schema version and an explicit
   migration; silent reinterpretation of existing locks or models is forbidden.
+- Normalized-model schema v0 is retained unchanged. Schema v1 has no lossy
+  serialized-model migration because its new source/policy distinctions require
+  original evidence; callers must re-normalize the immutable v0 source lock.

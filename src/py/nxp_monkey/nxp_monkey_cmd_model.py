@@ -15,7 +15,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "model",
         help="Normalize and compare portable source models",
-        description="Build canonical model-v0 JSON from a verified offline source lock.",
+        description="Build canonical model-v1 JSON from a verified offline source lock.",
         formatter_class=RichHelpFormatter,
     )
     actions = parser.add_subparsers(dest="action", metavar="ACTION", required=True)
@@ -50,4 +50,4 @@ def run_compare(args: argparse.Namespace) -> int:
         if args.json
         else f"{report['summary']['total_differences']} differences"
     )
-    return 0
+    return 2 if report["summary"]["unclassified"] else 0

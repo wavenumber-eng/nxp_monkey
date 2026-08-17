@@ -62,7 +62,7 @@
       "summary": "Resolve and verify immutable official-source locks"
     },
     {
-      "config_contract": "docs/contracts/schemas/normalized_model.schema.v0.json",
+      "config_contract": "docs/contracts/schemas/normalized_model.schema.v1.json",
       "design_doc": "docs/design/cli/model.html",
       "name": "model",
       "summary": "Normalize and compare portable official-source models"

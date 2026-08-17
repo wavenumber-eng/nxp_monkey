@@ -8,7 +8,8 @@ import json
 import re
 import subprocess
 import xml.etree.ElementTree as ET
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -62,14 +63,68 @@ _REPRODUCTION_PINS = {
         ("P3_19", "GPIO3_19"),
     ),
 }
-_HEX = re.compile(r"^0[xX][0-9A-Fa-f]+$")
-_MODEL_SCHEMA = (
-    Path(__file__).resolve().parents[3]
-    / "docs"
-    / "contracts"
-    / "schemas"
-    / "normalized_model.schema.v0.json"
+_KNOWN_REGISTER_MAP_DIFFERENCES = {
+    "/ip/DMA0/register_map": (
+        (5, "447bcd71192d6e77c4ab283a5294d406b3a20953ee6db399b033f3301582169f"),
+        (12, "e765d210b8c8260a7a7fce55416540ec28f85ce22e4a436c95736985f4635110"),
+    ),
+    **{
+        f"/ip/GPIO{index}/register_map": (
+            (45, "fd8c7787bada2729bb37a1fbae2c158d9826425192e40c35f9fd2e211d708400"),
+            (19, "ca04392c50db2b1c3747bdbb9ba0f82f3675a97bfbc867ebc450e09e9589ea64"),
+        )
+        for index in range(5)
+    },
+    "/ip/MRCC0/register_map": (
+        (86, "a6e5f7d40027c4d42f35a47772c8b84b8dec08e06b47164fa0f424741553891f"),
+        (12, "3132f7195877849dbe8d5ad6e34faeef74fe3c44e878543723515fe6d1051a70"),
+    ),
+    "/ip/OSTIMER0/register_map": (
+        (7, "3307820812bea4678001c393c52b0cf46c5034d0d77e47a07af893188663f2d4"),
+        (6, "e7528b0913ea33e58cb0b1785af078201c8ae05799ef7ef11232606b3649ca42"),
+    ),
+    "/ip/PORT0/register_map": (
+        (30, "c86bc72293eed1898a98026fb3113c310d141dd044e742ca6eb9adf26bc1cdf6"),
+        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+    ),
+    "/ip/PORT1/register_map": (
+        (29, "1e6f2dc8b20021b0bca9e0d8fa66b1569b60bbccd1ebe90e79b57a5a6c6a5391"),
+        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+    ),
+    "/ip/PORT2/register_map": (
+        (31, "1a97d7c938fe5e0093bd505cd1ce9cce590f8f77348cd259d62525f3864d1f7d"),
+        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+    ),
+    "/ip/PORT3/register_map": (
+        (38, "66de3a5245e7fa9319348ccfee49197f9d77770f8f4443cdc31a7ea0468f4453"),
+        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+    ),
+    "/ip/PORT4/register_map": (
+        (14, "038a80ac77c6c83c794a29b23efea86888227dc42a7ce4dcfe0bd4dc08d0a9bd"),
+        (5, "5a9b065b1eae52b91c4427650c6f224e32ad0010cf69cc9df2f4b8c20304621c"),
+    ),
+    "/ip/SCG0/register_map": (
+        (26, "43155b68cc17c01549df8ed78a7114bc579261d08a8583315fa53973fcd2f171"),
+        (39, "cf1bdcf18d7ba491f7d5223298e0d61db7d9a34679c70b2d0b80018ad9f81116"),
+    ),
+}
+_KNOWN_COMPATIBILITY_PREFIXES = (
+    "/boards/",
+    "/clocks/",
+    "/dma/",
+    "/flash/",
+    "/global_pin_scope",
+    "/instances/",
+    "/interrupts/",
+    "/ip/",
+    "/linker_regions/",
+    "/memories/",
+    "/packages/",
+    "/pins/",
+    "/priority_bits",
+    "/resets/",
 )
+_HEX = re.compile(r"^0[xX][0-9A-Fa-f]+$")
 ModelRecord = dict[str, Any]
 
 
@@ -89,7 +144,10 @@ def normalize_model(
     inputs = _Inputs(payload, Path(cache_dir))
     model = _build_model(payload, inputs)
     model = canonicalize_model(model)
-    jsonschema.validate(model, json.loads(_MODEL_SCHEMA.read_text(encoding="utf-8")))
+    try:
+        jsonschema.validate(model, _model_schema())
+    except jsonschema.ValidationError as exc:
+        raise ModelError(f"normalized model failed schema v1 validation: {exc.message}") from exc
     validate_model_semantics(model)
     Path(output).write_bytes(canonical_json_bytes(model))
     return model
@@ -112,40 +170,25 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
         right_fact = right_projection.get(key)
         if left_fact == right_fact:
             continue
-        classification = "mismatch"
-        disposition = "requires source or adapter correction"
-        status = "unresolved"
-        if left_fact is None or right_fact is None:
-            if not portable_pair:
-                classification = "missing"
-                disposition = "selected v0 reproduction fact is missing"
-            else:
-                classification = "absent"
-                disposition = "classified derivative-only fact"
-                status = "classified"
-        elif portable_pair:
-            classification = _compatibility_class(key)
-            disposition = "classified device-specific value; do not reuse unchanged"
-            status = "classified"
-        elif _is_evidence_backed_reproduction_difference(key, left_fact, right_fact):
-            classification = "known-oracle-difference"
-            disposition = "official SDK and upstream oracle encode distinct supported semantics"
-            status = "classified"
+        classification, disposition, status = _difference_disposition(
+            key, left_fact, right_fact, portable_pair
+        )
         finding_payload = {"field": key, "left": left_fact, "right": right_fact}
         finding_id = (
             "difference:" + hashlib.sha256(canonical_json_bytes(finding_payload)).hexdigest()[:24]
         )
-        findings.append(
-            {
-                "classification": classification,
-                "disposition": disposition,
-                "field": key,
-                "id": finding_id,
-                "left": left_fact,
-                "right": right_fact,
-                "status": status,
-            }
-        )
+        finding = {
+            "classification": classification,
+            "disposition": disposition,
+            "field": key,
+            "id": finding_id,
+            "left": left_fact,
+            "right": right_fact,
+            "status": status,
+        }
+        if portable_pair:
+            finding.update(_compatibility_evidence(left_value, right_value))
+        findings.append(finding)
     coverage = _coverage(left_value, right_value)
     report = {
         "canonicalization": "json-sort-keys-indent-2-lf-final-newline-v0",
@@ -167,6 +210,34 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
     }
     Path(output).write_bytes(canonical_json_bytes(report))
     return report
+
+
+def _difference_disposition(
+    key: str, left: object, right: object, portable_pair: bool
+) -> tuple[str, str, str]:
+    if left is None or right is None:
+        if portable_pair:
+            return (
+                "absent",
+                "conservative policy: derivative-only fact is not reusable",
+                "classified",
+            )
+        return "missing", "selected v1 reproduction fact is missing", "unresolved"
+    if portable_pair and key.startswith(_KNOWN_COMPATIBILITY_PREFIXES):
+        return (
+            "incompatible",
+            "conservative v1 policy: non-exact fact must not be reused unchanged",
+            "classified",
+        )
+    if portable_pair:
+        return "unknown-portable-delta", "new comparison path requires policy review", "unresolved"
+    if _is_evidence_backed_reproduction_difference(key, left, right):
+        return (
+            "known-oracle-difference",
+            "exact reviewed v1 representation rule matches both oracle values",
+            "classified",
+        )
+    return "mismatch", "requires source or adapter correction", "unresolved"
 
 
 def canonicalize_model(model: dict[str, Any]) -> dict[str, Any]:
@@ -213,7 +284,9 @@ def _canonicalize_derivative(derivative: ModelRecord) -> None:
     for memory in derivative["memories"]:
         memory["cores"].sort()
     derivative["memories"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
-    derivative["linker_regions"].sort(key=lambda item: (int(item["address"], 16), item["name"]))
+    derivative["linker_regions"].sort(
+        key=lambda item: (int(item["address"], 16), item["name"], item["condition"] or "")
+    )
     for pin in derivative["global_pins"]:
         pin["signals"].sort(key=lambda item: (item["mux"], item["name"]))
     derivative["global_pins"].sort(key=lambda item: item["name"])
@@ -232,10 +305,11 @@ def _canonicalize_derivative(derivative: ModelRecord) -> None:
     derivative["flash"]["timing_rows"].sort(
         key=lambda item: (
             item["mode"],
+            item["basis"],
             item["voltage_min_mv"] if item["voltage_min_mv"] is not None else -1,
             item["voltage_max_mv"] if item["voltage_max_mv"] is not None else -1,
             item["temperature_max_c"] if item["temperature_max_c"] is not None else -1,
-            item["max_frequency_hz"],
+            item["frequency_hz"],
             item["wait_states"],
         )
     )
@@ -246,6 +320,7 @@ def validate_model_semantics(model: dict[str, Any]) -> None:
     """Enforce cross-reference, identity, provenance, and hash invariants."""
     if model.get("model_id") != _identity(model, "model_id"):
         raise ModelError("model_id does not match canonical projection")
+    _validate_record_uniqueness(model)
     provenance_ids = _validate_provenance_records(model)
     _validate_model_references(model)
     expected = _fact_provenance(model)
@@ -256,13 +331,73 @@ def validate_model_semantics(model: dict[str, Any]) -> None:
         raise ModelError("field-level provenance coverage is incomplete")
 
 
+def _validate_record_uniqueness(model: ModelRecord) -> None:
+    _require_unique(model["derivatives"], lambda item: item["device"], "derivative device")
+    _require_unique(model["ip_blocks"], lambda item: item["id"], "IP block ID")
+    _require_unique(
+        model["packages"], lambda item: (item["device"], item["sku"]), "package device/SKU"
+    )
+    _require_unique(model["boards"], lambda item: item["id"], "board ID")
+    _require_unique(model["conflicts"], lambda item: item["id"], "conflict ID")
+    _require_unique(
+        model["fact_provenance"], lambda item: item["pointer"], "fact-provenance pointer"
+    )
+    for block in model["ip_blocks"]:
+        _require_unique(block["registers"], lambda item: item["name"], "register name")
+        _require_unique(block["registers"], lambda item: item["offset"], "register offset")
+        for register in block["registers"]:
+            _require_unique(register["fields"], lambda item: item["name"], "field name")
+            _require_unique(register["fields"], lambda item: item["bit_offset"], "field offset")
+    for derivative in model["derivatives"]:
+        _validate_derivative_uniqueness(derivative)
+
+
+def _validate_derivative_uniqueness(derivative: ModelRecord) -> None:
+    collections = (
+        ("cores", "name"),
+        ("memories", "name"),
+        ("global_pins", "name"),
+        ("instances", "name"),
+        ("interrupts", "name"),
+        ("dma_requests", "name"),
+        ("clocks", "id"),
+        ("resets", "id"),
+        ("capabilities", "name"),
+    )
+    for collection, key in collections:
+        _require_unique(
+            derivative[collection], lambda item, key=key: item[key], f"{collection} {key}"
+        )
+    _require_unique(
+        derivative["linker_regions"],
+        lambda item: (item["image"], item["name"], item["condition"]),
+        "linker-region image/name/condition",
+    )
+
+
+def _require_unique(
+    records: list[ModelRecord], key: Callable[[ModelRecord], object], label: str
+) -> None:
+    values = [key(item) for item in records]
+    if len(set(values)) != len(values):
+        raise ModelError(f"duplicate {label}")
+
+
 def _validate_provenance_records(model: dict[str, Any]) -> set[str]:
     provenance_ids = {item["id"] for item in model["provenance"]}
     if len(provenance_ids) != len(model["provenance"]):
         raise ModelError("duplicate provenance ID")
     lock_ids = set(model["source_lock_ids"])
-    if any(item["source_lock_id"] not in lock_ids for item in model["provenance"]):
+    if any(
+        item.get("source_lock_id") not in lock_ids
+        for item in model["provenance"]
+        if item["source_kind"] != "policy"
+    ):
         raise ModelError("provenance references a missing source lock")
+    if any(
+        "source_lock_id" in item for item in model["provenance"] if item["source_kind"] == "policy"
+    ):
+        raise ModelError("policy provenance must not claim an upstream source lock")
     return provenance_ids
 
 
@@ -288,15 +423,20 @@ def _validate_derivative_references(
     packages: set[tuple[str, str]],
 ) -> None:
     instances = {item["name"] for item in derivative["instances"]}
+    cores = {item["name"] for item in derivative["cores"]}
     clocks = {item["id"] for item in derivative["clocks"]}
     resets = {item["id"] for item in derivative["resets"]}
-    pins = {item["name"] for item in derivative["global_pins"]}
+    pins = {item["name"]: item["signals"] for item in derivative["global_pins"]}
     if any(item["ip_block_id"] not in block_ids for item in derivative["instances"]):
         raise ModelError("instance references a missing IP block")
     if any(not set(item["clock_ids"]) <= clocks for item in derivative["instances"]):
         raise ModelError("instance references a missing clock")
     if any(not set(item["reset_ids"]) <= resets for item in derivative["instances"]):
         raise ModelError("instance references a missing reset")
+    if any(not set(item["parents"]) <= clocks for item in derivative["clocks"]):
+        raise ModelError("clock references a missing parent")
+    if any(not set(item["cores"]) <= cores for item in derivative["memories"]):
+        raise ModelError("memory references a missing core")
     _validate_dma_references(derivative["dma_requests"], instances)
     for board in (item for item in boards if item["device"] == derivative["device"]):
         _validate_board_references(board, instances, pins, packages)
@@ -312,19 +452,29 @@ def _validate_dma_references(requests: list[ModelRecord], instances: set[str]) -
 def _validate_board_references(
     board: ModelRecord,
     instances: set[str],
-    pins: set[str],
+    pins: dict[str, list[ModelRecord]],
     packages: set[tuple[str, str]],
 ) -> None:
     if (board["device"], board["package_sku"]) not in packages:
         raise ModelError("board references a missing package")
     for resource in board["resources"]:
-        if resource["type"] == "led" and resource["pin"] not in pins:
-            raise ModelError("board LED references a missing pin")
+        if resource["type"] == "led":
+            pin = resource["pin"]
+            port, number = pin[1:].split("_", 1)
+            if (f"GPIO{port}_{number}", 0) not in _pin_signals(pins.get(pin, [])):
+                raise ModelError("board LED references a missing pin signal or mux")
         if resource["type"] == "uart":
             if resource["instance"] not in instances:
                 raise ModelError("board UART references a missing instance")
-            if resource["rx"]["pin"] not in pins or resource["tx"]["pin"] not in pins:
-                raise ModelError("board UART references a missing pin")
+            for direction in ("rx", "tx"):
+                route = resource[direction]
+                signal = f"{resource['instance']}_{direction.upper()}D"
+                if (signal, route["mux"]) not in _pin_signals(pins.get(route["pin"], [])):
+                    raise ModelError("board UART references a missing pin signal or mux")
+
+
+def _pin_signals(signals: list[ModelRecord]) -> set[tuple[str, int]]:
+    return {(item["name"], item["mux"]) for item in signals}
 
 
 class _Inputs:
@@ -378,10 +528,7 @@ class _Inputs:
         for (project, path), record in sorted(self.used.items()):
             if project == "mcux-soc-svd":
                 source_kind = "svd"
-            elif (
-                path.endswith((".h", "_COMMON.h"))
-                and f"/{self.lock['request']['device'].upper()}" in path
-            ):
+            elif path.endswith(f"/{self.lock['request']['device'].upper()}_COMMON.h"):
                 source_kind = "cmsis"
             else:
                 source_kind = "sdk"
@@ -430,7 +577,8 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
     board_text, board_ref = _board_pin_source(inputs, device)
     board_header, board_header_ref = inputs.text("/board.h", "mcu-sdk-examples")
     board = _board(device, board_text, board_ref, board_header, board_header_ref)
-    global_pins = _board_required_pins(_global_pins(board_text, board_ref), board, board_header_ref)
+    policy_ref = "policy.normalized-model-v1"
+    global_pins = _board_required_pins(_global_pins(board_text, board_ref), board)
     derivative = {
         "capabilities": _capabilities(chip, chip_ref),
         "clocks": _clocks(clock_text, clock_ref, chip),
@@ -439,7 +587,7 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
         "dma_requests": _dma(dma_text, dma_ref, dma_soc_text, dma_soc_ref),
         "flash": _flash(device, inputs),
         "global_pin_scope": {
-            "provenance_refs": [board_ref, board_header_ref],
+            "provenance_refs": [policy_ref],
             "value": "board-required-subset",
         },
         "global_pins": global_pins,
@@ -468,7 +616,7 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
         ],
         "resets": _resets(reset_text, reset_ref),
     }
-    return _assemble_model(lock, inputs, derivative, board, blocks, chip, chip_ref)
+    return _assemble_model(lock, inputs, derivative, board, blocks, chip, chip_ref, policy_ref)
 
 
 def _assemble_model(
@@ -479,6 +627,7 @@ def _assemble_model(
     blocks: list[ModelRecord],
     chip: ModelRecord,
     chip_ref: str,
+    policy_ref: str,
 ) -> ModelRecord:
     packages = [
         {
@@ -487,7 +636,7 @@ def _assemble_model(
             "device": derivative["device"],
             "package": item["name"],
             "pins": [],
-            "provenance_refs": [chip_ref],
+            "provenance_refs": [chip_ref, policy_ref],
             "sku": item["name"],
         }
         for item in chip["part"]
@@ -501,9 +650,22 @@ def _assemble_model(
         "ip_blocks": blocks,
         "model_id": "sha256:" + "0" * 64,
         "packages": packages,
-        "provenance": inputs.provenance(),
-        "schema_version": "0",
+        "provenance": [*inputs.provenance(), _policy_provenance(policy_ref)],
+        "schema_version": "1",
         "source_lock_ids": [lock["lock_id"]],
+    }
+
+
+def _policy_provenance(policy_ref: str) -> ModelRecord:
+    resource = files("nxp_monkey").joinpath("schemas/normalized_model.policy.v1.txt")
+    payload = resource.read_bytes()
+    return {
+        "id": policy_ref,
+        "input_path": "docs/contracts/normalized_model.policy.v1.txt",
+        "locator": "nxp-monkey:docs/contracts/normalized_model.policy.v1.txt",
+        "project": "nxp-monkey",
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "source_kind": "policy",
     }
 
 
@@ -586,10 +748,12 @@ def _interrupts(
     }
     if not cmsis:
         raise ModelError("CMSIS header has no device interrupts")
-    startup_names = set(re.findall(r"\b([A-Za-z][A-Za-z0-9_]*)_IRQHandler\b", startup_text))
-    missing_startup = sorted(set(cmsis) - startup_names)
-    if missing_startup:
-        raise ModelError(f"startup vector lacks CMSIS interrupts: {missing_startup}")
+    startup = _startup_interrupts(startup_text)
+    mismatched_startup = sorted(
+        name for name, number in cmsis.items() if startup.get(name) != number
+    )
+    if mismatched_startup:
+        raise ModelError(f"startup vector slot mismatches CMSIS interrupts: {mismatched_startup}")
     svd = {item["name"]: item for item in svd_interrupts}
     result = []
     for name, number in cmsis.items():
@@ -603,6 +767,27 @@ def _interrupts(
             refs.extend(svd_item["provenance_refs"])
         result.append({"name": name.upper(), "number": number, "provenance_refs": refs})
     return result
+
+
+def _startup_interrupts(text: str) -> dict[str, int]:
+    if "__Vectors:" in text:
+        table = _required_match(r"__Vectors:(.*?)\.size\s+__Vectors", text, "startup vector")
+        entries = re.findall(r"^\s*\.long\s+([A-Za-z0-9_]+)", table, re.MULTILINE)
+        if len(entries) < 17:
+            raise ModelError("startup vector has no device interrupt slots")
+        return {
+            name.removesuffix("_IRQHandler"): index
+            for index, name in enumerate(entries[16:])
+            if name.endswith("_IRQHandler")
+        }
+    numbered = re.findall(
+        r"^\s*([A-Za-z][A-Za-z0-9_]*)_IRQHandler\s*,\s*//\s*(\d+)\s*:",
+        text,
+        re.MULTILINE,
+    )
+    if not numbered:
+        raise ModelError("startup vector has no numbered device interrupt slots")
+    return {name: int(slot) - 16 for name, slot in numbered}
 
 
 def _linker_regions(
@@ -619,25 +804,55 @@ def _linker_regions(
 def _parse_linker_memory(text: str, ref: str, image: str) -> list[ModelRecord]:
     block = _required_match(r"\bMEMORY\s*\{(.*?)\}", text, f"{image} linker MEMORY block")
     rows = []
-    for name, access, address, size in re.findall(
+    matches = re.findall(
         r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(([A-Za-z]+)\)\s*:\s*"
-        r"ORIGIN\s*=\s*(0x[0-9A-Fa-f]+)\s*,\s*LENGTH\s*=\s*(0x[0-9A-Fa-f]+)",
+        r"ORIGIN\s*=\s*([^,\r\n]+)\s*,\s*LENGTH\s*=\s*([^\r\n]+)",
         block,
         re.MULTILINE,
-    ):
-        rows.append(
-            {
-                "access": access.lower(),
-                "address": _hex(int(address, 0)),
-                "image": image,
-                "name": name,
-                "provenance_refs": [ref],
-                "size": int(size, 0),
-            }
-        )
+    )
+    for name, access, address, size in matches:
+        addresses = _linker_expression_values(address, text)
+        sizes = _linker_expression_values(size, text)
+        if set(addresses) != set(sizes):
+            raise ModelError(f"{image} linker region {name} has mismatched conditions")
+        for condition in addresses:
+            rows.append(
+                {
+                    "access": access.lower(),
+                    "address": _hex(addresses[condition]),
+                    "condition": condition,
+                    "image": image,
+                    "name": name,
+                    "provenance_refs": [ref],
+                    "size": sizes[condition],
+                }
+            )
     if not rows:
         raise ModelError(f"{image} linker MEMORY block has no regions")
+    declared = len(re.findall(r"\bORIGIN\s*=", block))
+    if declared != len(matches):
+        raise ModelError(f"{image} linker MEMORY block contains an unparsed region")
+    required = "m_text" if image == "flash" else "m_data"
+    if required not in {item["name"] for item in rows}:
+        raise ModelError(f"{image} linker MEMORY block lacks required {required} region")
     return rows
+
+
+def _linker_expression_values(expression: str, text: str) -> dict[str | None, int]:
+    expression = expression.strip()
+    if re.fullmatch(r"0x[0-9A-Fa-f]+", expression):
+        return {None: int(expression, 0)}
+    match = re.fullmatch(r"(0x[0-9A-Fa-f]+)\s*([+-])\s*RAM_OFFSET", expression)
+    offset = re.search(
+        r"RAM_OFFSET\s*=\s*DEFINED\(__pkc__\)\s*\?\s*(0x[0-9A-Fa-f]+)\s*:\s*0",
+        text,
+    )
+    if match is None or offset is None:
+        raise ModelError(f"unsupported linker expression: {expression}")
+    base, operation = int(match.group(1), 0), match.group(2)
+    delta = int(offset.group(1), 0)
+    defined = base + delta if operation == "+" else base - delta
+    return {"__pkc__ defined": defined, "__pkc__ undefined": base}
 
 
 def _registers(peripheral: ET.Element, provenance: str) -> list[dict[str, Any]]:
@@ -756,7 +971,7 @@ def _clocks(text: str, ref: str, chip: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "id": f"{name.lower()}-gate",
                     "kind": "gate",
-                    "max_frequency_hz": chip["frequency_mhz"] * 1_000_000,
+                    "max_frequency_hz": None,
                     "parents": [],
                     "provenance_refs": [ref],
                     "selector": None,
@@ -773,11 +988,22 @@ def _clocks(text: str, ref: str, chip: dict[str, Any]) -> list[dict[str, Any]]:
         {
             "id": "lpuart0-fclk",
             "kind": "mux",
-            "max_frequency_hz": chip["frequency_mhz"] * 1_000_000,
+            "max_frequency_hz": None,
             "parents": parents,
             "provenance_refs": [ref],
             "selector": "kCLOCK_SelLPUART0",
         }
+    )
+    clocks.extend(
+        {
+            "id": parent,
+            "kind": "source",
+            "max_frequency_hz": None,
+            "parents": [],
+            "provenance_refs": [ref],
+            "selector": None,
+        }
+        for parent in parents
     )
     return clocks
 
@@ -816,13 +1042,7 @@ def _attach_gates(
             instance["reset_ids"] = [f"{name.lower()}-reset"]
             instance["gate"] = {
                 "bit": str(gate_bit),
-                "config": (
-                    "LpuartConfig"
-                    if name.startswith("LPUART")
-                    else "OsTimerConfig"
-                    if name == "OSTIMER0"
-                    else None
-                ),
+                "config": None,
                 "enable_register": f"MRCC.GLB_CC{gate_group}",
                 "reset_register": f"MRCC.GLB_RST{reset_group}",
             }
@@ -862,10 +1082,12 @@ def _dma(text: str, ref: str, dma_soc_text: str, dma_soc_ref: str) -> list[Model
         "enabled DMA IP version",
     )
     requests = []
-    for signal, number in re.findall(r"kDma\d+RequestLPUART0(Rx|Tx)\s*=\s*(\d+)U", text):
+    for controller, signal, number in re.findall(
+        r"kDma(\d+)RequestLPUART0(Rx|Tx)\s*=\s*(\d+)U", text
+    ):
         requests.append(
             {
-                "controller": "DMA0",
+                "controller": f"DMA{controller}",
                 "instance": "LPUART0",
                 "mux": dma_version,
                 "name": f"LPUART0_{signal.upper()}",
@@ -900,7 +1122,10 @@ def _mcxa156_flash_rows(text: str, ref: str) -> list[dict[str, Any]]:
             values.add((int(marker.group(1)), int(wait.group(1), 16)))
     if not values:
         raise ModelError("MCXA156 board clock source has no parseable flash timing rows")
-    return [_timing("normal", mhz * 1_000_000, wait, ref) for mhz, wait in values]
+    expected_frequencies = {12, 24, 48, 64, 96}
+    if {frequency for frequency, _wait in values} != expected_frequencies:
+        raise ModelError("MCXA156 board clock source lacks the complete configured frequency set")
+    return [_timing("configured", "normal", mhz * 1_000_000, wait, ref) for mhz, wait in values]
 
 
 def _mcxa266_flash_rows(text: str, ref: str, device_max: int) -> list[dict[str, Any]]:
@@ -920,15 +1145,16 @@ def _mcxa266_flash_rows(text: str, ref: str, device_max: int) -> list[dict[str, 
             r"system_freq_hz > (\d+)U\)\s*\{\s*num_wait_states_added = (\d+)U;", block
         )
         for threshold, wait_states in branches:
-            rows.append(_timing(mode, upper, int(wait_states), ref))
+            rows.append(_timing("upper-bound", mode, upper, int(wait_states), ref))
             upper = int(threshold)
-        rows.append(_timing(mode, upper, 0, ref))
+        rows.append(_timing("upper-bound", mode, upper, 0, ref))
     return rows
 
 
-def _timing(mode: str, frequency: int, waits: int, ref: str) -> dict[str, Any]:
+def _timing(basis: str, mode: str, frequency: int, waits: int, ref: str) -> dict[str, Any]:
     return {
-        "max_frequency_hz": frequency,
+        "basis": basis,
+        "frequency_hz": frequency,
         "mode": mode,
         "provenance_refs": [ref],
         "temperature_max_c": None,
@@ -939,10 +1165,7 @@ def _timing(mode: str, frequency: int, waits: int, ref: str) -> dict[str, Any]:
 
 
 def _board_pin_source(inputs: _Inputs, device: str) -> tuple[str, str]:
-    suffix = (
-        "/demo_apps/hello_world/pin_mux.c" if device == "MCXA156" else "/common/pin_mux/pin_mux.c"
-    )
-    return inputs.text(suffix, "mcu-sdk-examples")
+    return inputs.text(f"/frdm{device.lower()}/common/pin_mux/pin_mux.c", "mcu-sdk-examples")
 
 
 def _global_pins(text: str, ref: str) -> list[dict[str, Any]]:
@@ -966,36 +1189,50 @@ def _global_pins(text: str, ref: str) -> list[dict[str, Any]]:
                 "provenance_refs": [ref],
             }
         )
+    configured = re.findall(
+        r"const port_pin_config_t\s+[A-Za-z0-9_]+\s*=\s*\{(.*?)\};\s*"
+        r"/\*\s*PORT(\d+)_(\d+).*?configured as ([A-Za-z0-9_]+)\s*\*/",
+        text,
+        flags=re.DOTALL,
+    )
+    for block, port, number, configured_as in configured:
+        mux_match = re.search(r"kPORT_MuxAlt(\d+)", block)
+        if mux_match is None:
+            continue
+        if configured_as == f"P{port}_{number}":
+            signal = f"GPIO{port}_{number}"
+        elif re.fullmatch(r"LPUART\d+_(?:RXD|TXD)", configured_as):
+            signal = configured_as
+        else:
+            continue
+        pin = f"P{port}_{number}"
+        fact = {"mux": int(mux_match.group(1)), "name": signal, "provenance_refs": [ref]}
+        if fact not in pins.setdefault(pin, []):
+            pins[pin].append(fact)
     return [
         {"name": name, "provenance_refs": [ref], "signals": signals}
         for name, signals in pins.items()
     ]
 
 
-def _board_required_pins(
-    pins: list[ModelRecord], board: ModelRecord, board_header_ref: str
-) -> list[ModelRecord]:
+def _board_required_pins(pins: list[ModelRecord], board: ModelRecord) -> list[ModelRecord]:
     by_name = {item["name"]: item for item in pins}
     for resource in board["resources"]:
         if resource["type"] != "led":
             continue
         pin = resource["pin"]
         port, number = pin[1:].split("_", 1)
-        signal = {
-            "mux": 0,
-            "name": f"GPIO{port}_{number}",
-            "provenance_refs": [board_header_ref],
+        expected = (f"GPIO{port}_{number}", 0)
+        actual = {
+            (signal["name"], signal["mux"]) for signal in by_name.get(pin, {}).get("signals", [])
         }
-        if pin not in by_name:
-            by_name[pin] = {
-                "name": pin,
-                "provenance_refs": [board_header_ref],
-                "signals": [signal],
-            }
-        else:
-            by_name[pin]["signals"].append(signal)
-            by_name[pin]["provenance_refs"].append(board_header_ref)
-    return list(by_name.values())
+        if expected not in actual:
+            raise ModelError(f"board pin source lacks exact LED mux for {pin}")
+    required = {resource["pin"] for resource in board["resources"] if resource["type"] == "led"}
+    for resource in board["resources"]:
+        if resource["type"] == "uart":
+            required.update((resource["rx"]["pin"], resource["tx"]["pin"]))
+    return [by_name[name] for name in required]
 
 
 def _board(
@@ -1008,6 +1245,9 @@ def _board(
     baud = int(_required_match(r"BOARD_DEBUG_UART_BAUDRATE\s+(\d+)U", header, "debug baud"))
     port = _required_match(r"BOARD_LED_GREEN_GPIO\s+GPIO(\d+)", header, "green LED port")
     pin = _required_match(r"BOARD_LED_GREEN_GPIO_PIN\s+(\d+)U", header, "green LED pin")
+    led_on = int(_required_match(r"LOGIC_LED_ON\s+(\d+)U", header, "LED active level"))
+    if led_on not in (0, 1):
+        raise ModelError("LED active level is not binary")
     uart_pins = {}
     for item in _global_pins(pin_text, pin_ref):
         for signal in item["signals"]:
@@ -1025,7 +1265,7 @@ def _board(
         "provenance_refs": [pin_ref, header_ref],
         "resources": [
             {
-                "active_level": "low",
+                "active_level": "low" if led_on == 0 else "high",
                 "name": "green",
                 "pin": f"P{port}_{pin}",
                 "provenance_refs": [header_ref],
@@ -1033,15 +1273,10 @@ def _board(
             },
             {
                 "baud": baud,
-                "data_bits": 8,
-                "flow_control": "none",
                 "instance": instance,
                 "name": "vcom",
-                "parity": "none",
                 "provenance_refs": [pin_ref, header_ref],
                 "rx": uart_pins["RXD"],
-                "stop_bits": 1,
-                "transport": "debug-probe-vcom",
                 "tx": uart_pins["TXD"],
                 "type": "uart",
             },
@@ -1052,7 +1287,7 @@ def _board(
 def _comparison_projection(value: dict[str, Any]) -> dict[str, Any]:
     if "_rust_projection" in value:
         return value["_rust_projection"]
-    if value.get("schema_version") == "0" and "derivatives" in value:
+    if value.get("schema_version") == "1" and "derivatives" in value:
         return _portable_projection(value)
     if "chips" in value and "peripherals" in value:
         return _adapter_projection(value)
@@ -1068,7 +1303,8 @@ def _portable_projection(value: dict[str, Any]) -> dict[str, Any]:
     for item in derivative["memories"]:
         projection[f"/memories/{item['name']}"] = [item["address"], item["size"]]
     for item in derivative["linker_regions"]:
-        projection[f"/linker_regions/{item['image']}/{item['name']}"] = [
+        condition = item["condition"] or "unconditional"
+        projection[f"/linker_regions/{item['image']}/{item['name']}/{condition}"] = [
             item["address"],
             item["size"],
             item["access"],
@@ -1131,10 +1367,20 @@ def _portable_hardware_projection(
     return projection
 
 
-def _compatibility_class(field: str) -> str:
-    if field.startswith(("/ip/", "/instances/", "/interrupts/", "/dma/")):
-        return "incompatible"
-    return "curated-compatible"
+def _compatibility_evidence(left: ModelRecord, right: ModelRecord) -> ModelRecord:
+    def source(model: ModelRecord, side: str) -> ModelRecord:
+        return {
+            "locators": sorted({item["locator"] for item in model["provenance"]}),
+            "model_id": model["model_id"],
+            "side": side,
+            "source_lock_ids": model["source_lock_ids"],
+        }
+
+    return {
+        "evidence": [left["model_id"], right["model_id"]],
+        "owner": "nxp-pac-and-embassy-board/pac-reconciliation",
+        "sources": [source(left, "left"), source(right, "right")],
+    }
 
 
 def _adapter_kind(left: ModelRecord, right: ModelRecord) -> str:
@@ -1143,7 +1389,7 @@ def _adapter_kind(left: ModelRecord, right: ModelRecord) -> str:
 
 
 def _is_portable_model(value: dict[str, Any]) -> bool:
-    return value.get("schema_version") == "0" and "derivatives" in value
+    return value.get("schema_version") == "1" and "derivatives" in value
 
 
 def _without_provenance(value: Any) -> Any:
@@ -1308,14 +1554,23 @@ def _rust_register_map_signature(text: str) -> ModelRecord:
 
 
 def _validate_comparison_model(value: ModelRecord) -> None:
+    if value.get("schema_version") == "0" and "derivatives" in value:
+        raise ModelError(
+            "normalized-model schema v0 cannot be silently reinterpreted; "
+            "re-normalize its retained source lock to schema v1"
+        )
     if not _is_portable_model(value):
         return
-    schema = json.loads(_MODEL_SCHEMA.read_text(encoding="utf-8"))
     try:
-        jsonschema.validate(value, schema)
+        jsonschema.validate(value, _model_schema())
         validate_model_semantics(value)
     except (jsonschema.ValidationError, ModelError) as exc:
         raise ModelError(f"comparison input model is invalid: {exc}") from exc
+
+
+def _model_schema() -> ModelRecord:
+    schema = files("nxp_monkey").joinpath("schemas/normalized_model.schema.v1.json")
+    return json.loads(schema.read_text(encoding="utf-8"))
 
 
 def _comparison_keys(
@@ -1326,6 +1581,15 @@ def _comparison_keys(
 ) -> list[str]:
     if _is_portable_model(left) and _is_portable_model(right):
         return sorted(set(left_projection) | set(right_projection))
+    return _reproduction_comparison_keys(left, right, left_projection, right_projection)
+
+
+def _reproduction_comparison_keys(
+    left: ModelRecord,
+    right: ModelRecord,
+    left_projection: ModelRecord,
+    right_projection: ModelRecord,
+) -> list[str]:
     portable = left if _is_portable_model(left) else right
     adapter = right if _is_portable_model(left) else left
     device = portable["derivatives"][0]["device"]
@@ -1337,12 +1601,7 @@ def _comparison_keys(
     adapter_kind = str(adapter.get("_adapter_kind", "metadata"))
     fixed_inventory = _fixed_reproduction_inventory(device, adapter_kind)
     if fixed_inventory is not None:
-        missing_adapter = sorted(fixed_inventory - set(adapter_projection))
-        if missing_adapter:
-            raise ModelError(
-                f"{adapter_kind} comparison oracle lacks required v0 facts: {missing_adapter}"
-            )
-        return sorted(fixed_inventory)
+        return _validated_fixed_inventory(fixed_inventory, adapter_projection, adapter_kind)
     if adapter_kind == "metadata":
         prefixes.extend(["/dma/LPUART0_", f"/packages/{device}"])
     selected = {
@@ -1357,6 +1616,15 @@ def _comparison_keys(
             key for key in candidate if key.startswith("/ip/") and key in portable_projection
         }
     return sorted(selected)
+
+
+def _validated_fixed_inventory(
+    inventory: set[str], adapter_projection: ModelRecord, adapter_kind: str
+) -> list[str]:
+    missing = sorted(inventory - set(adapter_projection))
+    if missing:
+        raise ModelError(f"{adapter_kind} comparison oracle lacks required v1 facts: {missing}")
+    return sorted(inventory)
 
 
 def _fixed_reproduction_inventory(device: str, adapter_kind: str) -> set[str] | None:
@@ -1429,17 +1697,49 @@ def _comparison_scope(left: ModelRecord, right: ModelRecord, keys: list[str]) ->
 
 def _is_evidence_backed_reproduction_difference(field: str, left: object, right: object) -> bool:
     if field.startswith("/ip/") and field.endswith("/register_map"):
-        return True
+        return _is_known_register_map_difference(field, left, right)
     if not field.endswith("/gate"):
         return False
+    return _is_known_gate_difference(field, left, right)
+
+
+def _is_known_register_map_difference(field: str, left: object, right: object) -> bool:
+    expected = _KNOWN_REGISTER_MAP_DIFFERENCES.get(field)
+    actual = (_register_signature_tuple(left), _register_signature_tuple(right))
+    return expected is not None and actual in (expected, expected[::-1])
+
+
+def _is_known_gate_difference(field: str, left: object, right: object) -> bool:
     values = (left, right)
     if not all(isinstance(item, dict) for item in values):
         return False
     left_gate = left if isinstance(left, dict) else {}
     right_gate = right if isinstance(right, dict) else {}
-    return any(
-        str(item.get("enable", "")).startswith("mrcc_glb_acc") for item in (left_gate, right_gate)
+    expected_config = (
+        "LpuartConfig"
+        if field in {"/instances/LPUART0/gate", "/instances/LPUART2/gate"}
+        else "OsTimerConfig"
+        if field == "/instances/OSTIMER0/gate"
+        else None
     )
+    configs = {left_gate.get("config"), right_gate.get("config")}
+    if configs not in ({None}, {None, expected_config}):
+        return False
+    if left_gate.get("reset") != right_gate.get("reset"):
+        return False
+    enables = {str(left_gate.get("enable")), str(right_gate.get("enable"))}
+    return len(enables) == 1 or any(
+        enables == {f"mrcc_glb_cc{group}", f"mrcc_glb_acc{group}"} for group in range(4)
+    )
+
+
+def _register_signature_tuple(value: object) -> tuple[int, str] | None:
+    if not isinstance(value, dict):
+        return None
+    count, digest = value.get("count"), value.get("sha256")
+    if not isinstance(count, int) or not isinstance(digest, str):
+        return None
+    return count, digest.removeprefix("sha256:")
 
 
 def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str, int]]:

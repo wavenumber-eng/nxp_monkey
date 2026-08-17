@@ -20,7 +20,9 @@ classifiers = [
     "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
+    "jsonschema>=4.0.0",
     "platformdirs>=4.0.0",
+    "PyYAML>=6.0.0",
     "rich>=13.0.0",
     "rich-argparse>=1.5.0",
 ]

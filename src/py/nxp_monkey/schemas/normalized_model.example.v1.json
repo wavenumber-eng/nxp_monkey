@@ -24,7 +24,8 @@
         ],
         "timing_rows": [
           {
-            "max_frequency_hz": 48000000,
+            "basis": "configured",
+            "frequency_hz": 48000000,
             "mode": "normal",
             "provenance_refs": [
               "fixture.sample"
@@ -36,8 +37,28 @@
           }
         ]
       },
+      "global_pin_scope": {
+        "provenance_refs": [
+          "fixture.sample"
+        ],
+        "value": "board-required-subset"
+      },
+      "global_pins": [],
       "instances": [],
       "interrupts": [],
+      "linker_regions": [
+        {
+          "access": "rx",
+          "address": "0x00000000",
+          "condition": null,
+          "image": "flash",
+          "name": "FLASH",
+          "provenance_refs": [
+            "fixture.sample"
+          ],
+          "size": 65536
+        }
+      ],
       "memories": [
         {
           "access": "rx",
@@ -92,7 +113,13 @@
       ]
     },
     {
-      "pointer": "/derivatives/0/flash/timing_rows/0/max_frequency_hz",
+      "pointer": "/derivatives/0/flash/timing_rows/0/basis",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/flash/timing_rows/0/frequency_hz",
       "provenance_refs": [
         "fixture.sample"
       ]
@@ -123,6 +150,48 @@
     },
     {
       "pointer": "/derivatives/0/flash/timing_rows/0/wait_states",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/global_pin_scope/value",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/access",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/address",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/condition",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/image",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/name",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
+      "pointer": "/derivatives/0/linker_regions/0/size",
       "provenance_refs": [
         "fixture.sample"
       ]
@@ -176,6 +245,12 @@
       ]
     },
     {
+      "pointer": "/packages/0/bond_out_status",
+      "provenance_refs": [
+        "fixture.sample"
+      ]
+    },
+    {
       "pointer": "/packages/0/device",
       "provenance_refs": [
         "fixture.sample"
@@ -195,9 +270,10 @@
     }
   ],
   "ip_blocks": [],
-  "model_id": "sha256:a0cdd6c96eccdd3492c9e36ae792f13bc13aa0db1df9e0324c5b211982f49381",
+  "model_id": "sha256:8583d5b2ff6a85024ae9f5a70a969e1a60b048d3a21f7ccac35c89048d765b42",
   "packages": [
     {
+      "bond_out_status": "unavailable",
       "capabilities": [],
       "device": "MCXSAMPLE",
       "package": "QFN48",
@@ -219,7 +295,7 @@
       "source_lock_id": "sha256:13e2213db6126d1c10f373d8b9bbc9ee29dbf768c6bc88dc57fb4a7bac8aec16"
     }
   ],
-  "schema_version": "0",
+  "schema_version": "1",
   "source_lock_ids": [
     "sha256:13e2213db6126d1c10f373d8b9bbc9ee29dbf768c6bc88dc57fb4a7bac8aec16"
   ]

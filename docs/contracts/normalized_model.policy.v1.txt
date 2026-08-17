@@ -1,0 +1,10 @@
+Normalized-model policy v1
+
+The value board-required-subset means global_pins contains only pins required
+by the retained board resources and makes no complete device-topology claim.
+
+The package bond_out_status value unavailable means the permitted locked v1
+inputs identify the package but do not provide a complete package pin bond-out.
+It is an explicit absence-of-evidence marker, not a device-data assertion.
+
+PAC adapter configuration type names are outside the portable source model.

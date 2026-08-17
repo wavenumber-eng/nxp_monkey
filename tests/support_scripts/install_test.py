@@ -91,6 +91,33 @@ def run_install_test(wheel: Path) -> None:
         _run([str(_venv_script(venv_dir, "nxp-monkey")), "version"], cwd=temp_dir, env=env)
         _run([str(_venv_script(venv_dir, "nxpm")), "version"], cwd=temp_dir, env=env)
         _run([str(python), "-m", "nxp_monkey", "--version"], cwd=temp_dir, env=env)
+        _run(
+            [
+                str(python),
+                "-c",
+                "from importlib.resources import files; "
+                "from pathlib import Path; "
+                "Path('model.json').write_bytes(files('nxp_monkey').joinpath("
+                "'schemas/normalized_model.example.v1.json').read_bytes())",
+            ],
+            cwd=temp_dir,
+            env=env,
+        )
+        _run(
+            [
+                str(_venv_script(venv_dir, "nxp-monkey")),
+                "model",
+                "compare",
+                "--left",
+                "model.json",
+                "--right",
+                "model.json",
+                "--output",
+                "report.json",
+            ],
+            cwd=temp_dir,
+            env=env,
+        )
         sys.stdout.write("Installed-package test passed.\n")
 
 
