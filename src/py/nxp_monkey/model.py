@@ -1672,7 +1672,7 @@ def _selected_reproduction_key(
 def _comparison_scope(left: ModelRecord, right: ModelRecord, keys: list[str]) -> ModelRecord:
     if _is_portable_model(left) and _is_portable_model(right):
         return {
-            "inventory": "mcxa-portable-compatibility-v0",
+            "inventory": "mcxa-portable-compatibility-v1",
             "not_compared": [
                 "core_details",
                 "derivative_capabilities",
@@ -1682,13 +1682,19 @@ def _comparison_scope(left: ModelRecord, right: ModelRecord, keys: list[str]) ->
             "selected_fact_count": len(keys),
         }
     adapter_kind = _adapter_kind(left, right)
-    not_compared = ["boards", "capabilities", "flash_timing", "linker_regions", "memories"]
+    not_compared = [
+        "boards",
+        "capabilities",
+        "flash_timing_points",
+        "linker_regions",
+        "memories",
+    ]
     if adapter_kind == "metadata":
         not_compared.append("register_maps")
     else:
         not_compared.extend(["dma_requests", "gates", "packages", "pins"])
     return {
-        "inventory": f"mcxa-board-increment-{adapter_kind}-v0",
+        "inventory": f"mcxa-board-increment-{adapter_kind}-v1",
         "not_compared": sorted(not_compared),
         "pin_scope": "board-required-subset",
         "selected_fact_count": len(keys),
