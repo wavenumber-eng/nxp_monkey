@@ -69,3 +69,21 @@ def test_compare_classifies_only_in_without_hiding_mismatch(tmp_path: Path) -> N
     report = compare_models(left=left_path, right=right_path, output=tmp_path / "report.json")
     assert report["summary"]["unclassified"] == 1
     assert report["findings"][0]["field"] == "/priority_bits"
+
+
+def test_compare_accepts_generated_nxp_pac_rust(tmp_path: Path) -> None:
+    rust = tmp_path / "mod.rs"
+    rust.write_text(
+        """pub enum Interrupt {
+    LPUART0 = 31,
+}
+pub const NVIC_PRIO_BITS: u8 = 3;
+pub const LPUART0: lpuart::Lpuart = unsafe {
+    lpuart::Lpuart::from_ptr(0x4009F000 as _)
+};
+""",
+        encoding="utf-8",
+    )
+    report = compare_models(left=EXAMPLE, right=rust, output=tmp_path / "rust-report.json")
+    assert report["summary"]["unclassified"] == 0
+    assert report["summary"]["classified"] > 0

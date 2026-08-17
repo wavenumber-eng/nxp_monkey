@@ -44,8 +44,8 @@ def normalize_model(
 def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -> dict[str, Any]:
     """Compare model-v0 or an nxp-pac metadata adapter with stable findings."""
     left_path, right_path = Path(left), Path(right)
-    left_value = json.loads(left_path.read_text(encoding="utf-8"))
-    right_value = json.loads(right_path.read_text(encoding="utf-8"))
+    left_value = _load_comparison_input(left_path)
+    right_value = _load_comparison_input(right_path)
     left_projection = _comparison_projection(left_value)
     right_projection = _comparison_projection(right_value)
     findings: list[dict[str, Any]] = []
@@ -697,6 +697,8 @@ def _board(
 
 
 def _comparison_projection(value: dict[str, Any]) -> dict[str, Any]:
+    if "_rust_projection" in value:
+        return value["_rust_projection"]
     if value.get("schema_version") == "0" and "derivatives" in value:
         return _portable_projection(value)
     if "chips" in value and "peripherals" in value:
@@ -727,27 +729,62 @@ def _portable_projection(value: dict[str, Any]) -> dict[str, Any]:
 
 def _adapter_projection(value: dict[str, Any]) -> dict[str, Any]:
     projection = {"/priority_bits": value.get("nvic_prio_bits")}
-    chips = value["chips"]
-    chip = chips[0] if isinstance(chips, list) else next(iter(chips.values()))
-    for item in chip.get("memory", chip.get("memories", [])):
-        name = item.get("name") or item.get("kind", "unknown")
-        projection[f"/memories/{name}"] = [
-            _normalize_hex(item.get("address", item.get("start", 0))),
-            int(item.get("size", 0)),
-        ]
-    peripherals = value["peripherals"]
+    projection.update(_adapter_memory_projection(value.get("chips", [])))
+    projection.update(_adapter_peripheral_projection(value["peripherals"]))
+    for name, number in value.get("interrupts", {}).items():
+        projection[f"/interrupts/{name}"] = int(number)
+    return projection
+
+
+def _adapter_memory_projection(chips: Any) -> dict[str, Any]:
+    projection: dict[str, Any] = {}
+    if isinstance(chips, dict):
+        chip = next(iter(chips.values()))
+        for item in chip.get("memory", chip.get("memories", [])):
+            name = item.get("name") or item.get("kind", "unknown")
+            projection[f"/memories/{name}"] = [
+                _normalize_hex(item.get("address", item.get("start", 0))),
+                int(item.get("size", 0)),
+            ]
+    return projection
+
+
+def _adapter_peripheral_projection(peripherals: Any) -> dict[str, Any]:
+    projection: dict[str, Any] = {}
     entries = peripherals.values() if isinstance(peripherals, dict) else peripherals
     for item in entries:
         name = item.get("name")
-        if name:
+        if name and "address" in item:
             projection[f"/instances/{name}/address"] = _normalize_hex(item["address"])
         for dma in item.get("dma_muxing", []):
-            dma_name = str(dma.get("signal", dma.get("name", ""))).upper()
+            dma_name = str(dma.get("signal", dma.get("name", "")))
+            dma_name = dma_name.removeprefix(str(name)).upper()
             if name and dma_name:
                 projection[f"/dma/{name}_{dma_name}"] = int(
                     dma.get("request", dma.get("request_number", 0))
                 )
+        for signal in item.get("signals", []):
+            for pin in signal.get("pins", []):
+                key = f"/pins/{pin['pin']}/{name}_{signal['name']}"
+                projection[key] = int(pin["alt"])
     return projection
+
+
+def _load_comparison_input(path: Path) -> dict[str, Any]:
+    if path.suffix.lower() != ".rs":
+        return json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    priority = _required_match(r"NVIC_PRIO_BITS:\s*u8\s*=\s*(\d+)", text, "NVIC priority")
+    projection: dict[str, Any] = {"/priority_bits": int(priority)}
+    for name, number in re.findall(r"^\s{4}([A-Z][A-Z0-9_]+)\s*=\s*(\d+),", text, re.MULTILINE):
+        projection[f"/interrupts/{name}"] = int(number)
+    for name, address in re.findall(
+        r"^pub const ([A-Z][A-Z0-9_]+):.*?from_ptr\((0x[0-9A-Fa-f]+) as _\)",
+        text,
+        re.MULTILINE,
+    ):
+        projection[f"/instances/{name}/address"] = _normalize_hex(address)
+    return {"_rust_projection": projection}
 
 
 def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str, int]]:
@@ -765,26 +802,7 @@ def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str
 
     def counts(value: dict[str, Any]) -> dict[str, int]:
         if "derivatives" not in value:
-            return {
-                "memories": len(next(iter(value.get("chips", [{}])), {}).get("memory", []))
-                if isinstance(value.get("chips"), list)
-                else 0,
-                "interrupts": len(value.get("interrupts", {})),
-                "ip_blocks": 0,
-                "instances": len(value.get("peripherals", {})),
-                "dma_requests": sum(
-                    len(item.get("dma_muxing", []))
-                    for item in (
-                        value.get("peripherals", {}).values()
-                        if isinstance(value.get("peripherals"), dict)
-                        else value.get("peripherals", [])
-                    )
-                ),
-                "clocks": 0,
-                "resets": 0,
-                "packages": len(value.get("chips", [])),
-                "boards": 0,
-            }
+            return _adapter_counts(value)
         derivative = value["derivatives"][0]
         result = {
             key: len(derivative.get(key, []))
@@ -800,6 +818,27 @@ def _coverage(left: dict[str, Any], right: dict[str, Any]) -> dict[str, dict[str
 
     left_counts, right_counts = counts(left), counts(right)
     return {key: {"left": left_counts[key], "right": right_counts[key]} for key in categories}
+
+
+def _adapter_counts(value: dict[str, Any]) -> dict[str, int]:
+    peripherals = value.get("peripherals", {})
+    entries = peripherals.values() if isinstance(peripherals, dict) else peripherals
+    entries = list(entries)
+    chips = value.get("chips", [])
+    memories = 0
+    if isinstance(chips, dict) and chips:
+        memories = len(next(iter(chips.values())).get("memory", []))
+    return {
+        "memories": memories,
+        "interrupts": len(value.get("interrupts", {})),
+        "ip_blocks": 0,
+        "instances": sum("address" in item for item in entries),
+        "dma_requests": sum(len(item.get("dma_muxing", [])) for item in entries),
+        "clocks": 0,
+        "resets": 0,
+        "packages": len(chips),
+        "boards": 0,
+    }
 
 
 def _fact_provenance(model: dict[str, Any]) -> list[dict[str, Any]]:

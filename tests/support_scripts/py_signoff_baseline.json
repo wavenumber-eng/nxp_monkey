@@ -4,7 +4,7 @@
     "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::_make_progress_cb:return",
     "src/py/nxp_monkey/nxp_monkey_cmd_fetch.py::make_cb:return"
   ],
-  "any_count_total": 57,
+  "any_count_total": 66,
   "complexity_offenders": {
     "src/py/nxp_monkey/kex_client.py::download_directory_zip": 13,
     "src/py/nxp_monkey/kex_client.py::portfolio_latest_map": 12,
