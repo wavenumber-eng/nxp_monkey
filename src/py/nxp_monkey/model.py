@@ -250,7 +250,7 @@ def _build_model(lock: dict[str, Any], inputs: _Inputs) -> dict[str, Any]:
     dma_dir = re.search(r"soc_periph\s+([A-Za-z0-9_]+)", variable_text)
     if dma_dir is None:
         raise ModelError("device variable.cmake does not select soc_periph")
-    dma_text, dma_ref = inputs.text(f"/MCXA/{dma_dir.group(1)}/PERI_DMA.h")
+    dma_text, dma_ref = inputs.text(f"MCXA/{dma_dir.group(1)}/PERI_DMA.h")
     board_text, board_ref = _board_pin_source(inputs, device)
     board_header, board_header_ref = inputs.text("/board.h", "mcu-sdk-examples")
     derivative = {
