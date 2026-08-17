@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 import socket
 import subprocess
-import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import NoReturn, cast
@@ -38,9 +37,6 @@ if os.environ.get("NXP_MONKEY_OFFLINE") == "1":
             _deny("shell subprocess")
         command = [str(part) for part in args]
         executable = Path(command[0]).name.casefold()
-        python_names = {Path(sys.executable).name.casefold(), "python", "python.exe"}
-        if executable in python_names:
-            return _real_popen(args, *popen_args, **kwargs)
         if executable not in {"git", "git.exe"}:
             _deny(f"subprocess {executable}")
         forbidden = {"clone", "fetch", "ls-remote", "pull", "push", "submodule"}

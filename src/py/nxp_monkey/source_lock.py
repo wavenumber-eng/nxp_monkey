@@ -1,8 +1,9 @@
 """Resolve and verify immutable locks for official MCUXpresso Git sources.
 
-The v0 implementation deliberately excludes KEX data.  It delegates manifest
-imports and board selection to west and the pinned manifest's own extension,
-then stores only exact Git identities and explicitly licensed file hashes.
+The v0 implementation deliberately excludes KEX data. It delegates manifest
+imports to west, independently replays board selection from pinned data without
+executing manifest extensions, and stores only exact Git identities plus
+explicitly licensed file hashes.
 """
 from __future__ import annotations
 
@@ -1012,7 +1013,6 @@ def _verify_manifest_oracle(
     profile: dict,
     cache_root: Path,
 ) -> None:
-    board = payload["request"]["board"]
     with tempfile.TemporaryDirectory(prefix="nxp-monkey-verify-") as temporary:
         workspace = Path(temporary) / "workspace"
         checkout = workspace / "manifests"
@@ -1033,13 +1033,11 @@ def _verify_manifest_oracle(
                 offline=True,
             )
         )
-        selection = _normalize_text(
-            _run_west(
-                ["-q", "update_board", "--set", "board", board, "--list-repo"],
-                cwd=workspace,
-                capture=True,
-                offline=True,
-            )
+        selection = _replay_board_selection(
+            workspace,
+            manifest_git,
+            commit,
+            payload["manifest"]["board_config"],
         )
         _verify_replayed_semantics(
             workspace,
@@ -1055,6 +1053,76 @@ def _verify_manifest_oracle(
         raise SourceLockError("offline west manifest replay differs from the lock")
     if selection != payload["manifest"]["selection_output"]:
         raise SourceLockError("offline update_board replay differs from the lock")
+
+
+def _replay_board_selection(
+    workspace: Path,
+    manifest_git: Path,
+    commit: str,
+    board_config_record: dict,
+) -> str:
+    """Reproduce ``update_board --list-repo`` without executing extension code."""
+    try:
+        import yaml
+        from west.manifest import Manifest
+    except ImportError as exc:  # pragma: no cover - dependency error path
+        raise SourceLockError("west and PyYAML are required for offline replay") from exc
+
+    board_config_bytes = _git_blob(
+        manifest_git, commit, board_config_record["path"], offline=True
+    )
+    if _sha256(board_config_bytes) != board_config_record["sha256"]:
+        raise SourceLockError("offline board configuration differs from the lock")
+    board_config = _load_yaml(
+        board_config_bytes.decode("utf-8"), "replayed board configuration"
+    )
+    repositories, optional = _board_repository_names(board_config)
+    manifest = Manifest.from_topdir(topdir=workspace)
+    selection = _board_selection_payload(manifest, repositories, optional)
+    return _normalize_text(
+        yaml.safe_dump(selection, default_flow_style=False, sort_keys=False, indent=2)
+    )
+
+
+def _board_repository_names(board_config: dict) -> tuple[set[str], set[str]]:
+    repositories = board_config.get("repo_list", [])
+    optional_repositories = board_config.get("optional_repos", [])
+    if not isinstance(repositories, list) or not isinstance(optional_repositories, list):
+        raise SourceLockError("replayed board repository lists must be arrays")
+    if not all(isinstance(name, str) and name for name in repositories):
+        raise SourceLockError("replayed board repository names must be strings")
+    if not all(isinstance(name, str) and name for name in optional_repositories):
+        raise SourceLockError("replayed optional repository names must be strings")
+    optional = set(optional_repositories)
+    return set(repositories) | optional, optional
+
+
+def _board_selection_payload(
+    manifest: Manifest, repositories: set[str], optional: set[str]
+) -> dict[str, dict[str, object]]:
+    project_map = {project.name: project for project in manifest.projects}
+    selection: dict[str, dict[str, object]] = {}
+    for name in sorted(repositories):
+        project = project_map.get(name)
+        if project is not None and not manifest.is_active(project):
+            continue
+        if project is None:
+            entry: dict[str, object] = {
+                "display_name": name,
+                "description": f"Repository '{name}' not found in manifest",
+            }
+        else:
+            userdata = project.userdata if isinstance(project.userdata, dict) else {}
+            entry = {
+                "display_name": userdata.get("display_name", name),
+                "description": userdata.get(
+                    "description", "No description available"
+                ),
+            }
+        if name in optional:
+            entry["optional"] = True
+        selection[name] = entry
+    return selection
 
 
 def _verify_replayed_semantics(

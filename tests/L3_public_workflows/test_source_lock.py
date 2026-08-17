@@ -82,17 +82,9 @@ def _build_offline_fixture(tmp_path: Path) -> tuple[dict, Path]:
     extension_py = b"""import os
 import socket
 import subprocess
+import sys
 
 from west.commands import WestCommand
-
-def assert_offline_denied(operation):
-    try:
-        operation()
-    except RuntimeError as exc:
-        if 'offline network access denied' in str(exc):
-            return
-        raise
-    raise RuntimeError('offline guard did not deny network operation')
 
 class FixtureUpdateBoard(WestCommand):
     def __init__(self):
@@ -106,11 +98,14 @@ class FixtureUpdateBoard(WestCommand):
 
     def do_run(self, args, unknown_args=None):
         if os.environ.get('NXP_MONKEY_OFFLINE') == '1':
-            assert_offline_denied(lambda: socket.getaddrinfo('example.com', 443))
-            assert_offline_denied(
-                lambda: subprocess.run(['curl', 'https://example.com'], check=False)
-            )
-        print('core:\\n  display_name: Core')
+            subprocess.run([
+                sys.executable,
+                '-I',
+                '-c',
+                "import socket; socket.getaddrinfo('example.com', 443)",
+            ], check=True)
+            raise RuntimeError('offline verifier executed untrusted extension code')
+        print('core:\\n  display_name: core\\n  description: No description available')
 """
     manifest_bare, manifest_commit = _bare_repository(
         tmp_path,
