@@ -620,11 +620,18 @@ def _board_pin_source(inputs: _Inputs, device: str) -> tuple[str, str]:
 
 def _global_pins(text: str, ref: str) -> list[dict[str, Any]]:
     pins: dict[str, list[dict[str, Any]]] = {}
-    pattern = re.compile(
-        r"pin_signal:\s*(P\d+_\d+)[^}\n]*(LPUART\d+)_(RXD|TXD).*?kPORT_MuxAlt(\d+)",
-        re.DOTALL,
+    blocks = re.findall(
+        r"const port_pin_config_t port(\d+)_(\d+)_pin\d+_config\s*=\s*\{(.*?)\};",
+        text,
+        flags=re.DOTALL,
     )
-    for pin, instance, signal, mux in pattern.findall(text):
+    for port, number, block in blocks:
+        signal_match = re.search(r"Pin is configured as (LPUART\d+)_(RXD|TXD)", block)
+        mux_match = re.search(r"kPORT_MuxAlt(\d+)", block)
+        if signal_match is None or mux_match is None:
+            continue
+        instance, signal = signal_match.groups()
+        pin, mux = f"P{port}_{number}", mux_match.group(1)
         pins.setdefault(pin, []).append(
             {
                 "mux": int(mux),
