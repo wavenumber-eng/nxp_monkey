@@ -100,6 +100,42 @@ def test_runtime_validation_rejects_duplicate_instance_name() -> None:
         validate_model_semantics(malformed)
 
 
+def test_runtime_validation_rejects_duplicate_nested_keys() -> None:
+    malformed = _example()
+    signal = {"mux": 0, "name": "GPIO0_0", "provenance_refs": ["fixture.sample"]}
+    malformed["derivatives"][0]["global_pins"] = [
+        {
+            "name": "P0_0",
+            "provenance_refs": ["fixture.sample"],
+            "signals": [signal, copy.deepcopy(signal)],
+        }
+    ]
+    malformed = model_module.canonicalize_model(malformed)
+    with pytest.raises(ModelError, match="duplicate global-pin signal"):
+        validate_model_semantics(malformed)
+
+    malformed = _example()
+    resource = {
+        "active_level": "low",
+        "name": "green",
+        "pin": "P0_0",
+        "provenance_refs": ["fixture.sample"],
+        "type": "led",
+    }
+    malformed["boards"] = [
+        {
+            "device": "MCXSAMPLE",
+            "id": "fixture-board",
+            "package_sku": "MCXSAMPLEQFN48",
+            "provenance_refs": ["fixture.sample"],
+            "resources": [resource, copy.deepcopy(resource)],
+        }
+    ]
+    malformed = model_module.canonicalize_model(malformed)
+    with pytest.raises(ModelError, match="duplicate board resource"):
+        validate_model_semantics(malformed)
+
+
 def test_runtime_validation_rejects_missing_clock_parent_and_memory_core() -> None:
     malformed = _example()
     derivative = malformed["derivatives"][0]
@@ -165,6 +201,9 @@ def test_compare_classifies_portable_model_compatibility(tmp_path: Path) -> None
     assert report["summary"]["unclassified"] == 0
     assert report["findings"][0]["field"] == "/priority_bits"
     assert report["findings"][0]["classification"] == "incompatible"
+    assert all(
+        source["locators"] == ["synthetic fixture"] for source in report["findings"][0]["sources"]
+    )
 
 
 def test_compare_keeps_adapter_mismatch_unresolved(tmp_path: Path) -> None:
@@ -177,6 +216,13 @@ def test_compare_keeps_adapter_mismatch_unresolved(tmp_path: Path) -> None:
     assert report["summary"]["unclassified"] == 2
     mismatch = next(item for item in report["findings"] if item["field"] == "/priority_bits")
     assert mismatch["classification"] == "mismatch"
+    assert mismatch["owner"] == "nxp-pac-and-embassy-board/pac-reconciliation"
+    assert mismatch["rule"] == "fixed-reproduction-inventory-v1"
+    assert mismatch["sources"][0]["locators"] == ["synthetic fixture"]
+    assert mismatch["sources"][1]["oracle_path"] == "adapter.json"
+    assert (
+        mismatch["sources"][1]["oracle_sha256"] == hashlib.sha256(adapter.read_bytes()).hexdigest()
+    )
     args = argparse.Namespace(
         json=False, left=EXAMPLE, right=adapter, output=tmp_path / "cli-report.json"
     )
@@ -207,8 +253,17 @@ def test_register_map_rule_is_exact_and_startup_slots_are_numbered() -> None:
     assert model_module._is_evidence_backed_reproduction_difference(field, left, right)
     right["count"] += 1
     assert not model_module._is_evidence_backed_reproduction_difference(field, left, right)
-    startup = "LPUART0_IRQHandler, // 47 : UART\nGPIO3_IRQHandler, // 90 : GPIO\n"
-    assert model_module._startup_interrupts(startup) == {"LPUART0": 31, "GPIO3": 74}
+    device_entries = [f"Reserved{index}_IRQHandler" for index in range(75)]
+    device_entries[31] = "LPUART0_IRQHandler"
+    device_entries[74] = "GPIO3_IRQHandler"
+    startup = "// The vector table.\nvoid (*vectors[])(void) = {\n// Core Level\n"
+    startup += "\n".join(["0,"] * 16 + [f"{name}," for name in device_entries])
+    startup += "\n};\nLPUART0_IRQHandler, // 999 : decoy outside initializer\n"
+    parsed = model_module._startup_interrupts(startup)
+    assert parsed["LPUART0"] == 31
+    assert parsed["GPIO3"] == 74
+    moved = startup.replace("LPUART0_IRQHandler,", "Reserved_IRQHandler,", 1)
+    assert "LPUART0" not in model_module._startup_interrupts(moved)
 
 
 def test_rust_register_signature_covers_width_and_array_shape() -> None:
@@ -229,10 +284,21 @@ pub struct Word(pub u32);
 """
     original = model_module._rust_register_map_signature(source)
     assert original["count"] == 3
-    assert model_module._rust_register_map_signature(source.replace("Byte(pub u8)", "Byte(pub u16)")) != original
-    assert model_module._rust_register_map_signature(source.replace("Reg<u16", "Reg<u32")) != original
-    assert model_module._rust_register_map_signature(source.replace("n < 4usize", "n < 3usize")) != original
-    assert model_module._rust_register_map_signature(source.replace("n * 4usize", "n * 2usize")) != original
+    assert (
+        model_module._rust_register_map_signature(source.replace("Byte(pub u8)", "Byte(pub u16)"))
+        != original
+    )
+    assert (
+        model_module._rust_register_map_signature(source.replace("Reg<u16", "Reg<u32")) != original
+    )
+    assert (
+        model_module._rust_register_map_signature(source.replace("n < 4usize", "n < 3usize"))
+        != original
+    )
+    assert (
+        model_module._rust_register_map_signature(source.replace("n * 4usize", "n * 2usize"))
+        != original
+    )
     with pytest.raises(model_module.ModelError, match="unresolved backing type Byte"):
         model_module._rust_register_map_signature(source.replace("pub struct Byte(pub u8);\n", ""))
 
@@ -269,11 +335,16 @@ def test_synthetic_offline_normalization_exercises_primary_sources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     url = "https://example.invalid/synthetic-mcxa.git"
+    startup_entries = ["0"] * (16 + 75)
+    startup_entries[16 + 31] = "LPUART0_IRQHandler"
+    startup_entries[16 + 74] = "GPIO3_IRQHandler"
     files = {
         "MCXA/MCXA156/chip.yml": "device.hardware_data:\n  contents:\n    devices:\n      - frequency_mhz: 48\n        core:\n          - {name: cm33, type: cm33, fpu: NO_FPU}\n        memory:\n          memoryBlock:\n            - {name: PROGRAM_FLASH, addr: 0, size: 65536, type: Flash, access: RO}\n        part:\n          - {name: MCXA156VLL}\n",
         "svd/MCXA156.xml": "<device><cpu><nvicPrioBits>3</nvicPrioBits></cpu><peripherals>\n<peripheral><name>DMA0</name><baseAddress>0x40080000</baseAddress><registers><register><name>CSR</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>GPIO3</name><baseAddress>0x40105000</baseAddress><interrupt><name>GPIO3</name><value>74</value></interrupt><registers><register><name>PDOR</name><addressOffset>0x40</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>PORT0</name><baseAddress>0x400BC000</baseAddress><registers><register><name>PCR0</name><addressOffset>0x80</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>LPUART0</name><baseAddress>0x4009F000</baseAddress><interrupt><name>LPUART0</name><value>31</value></interrupt><registers><register><name>CTRL</name><addressOffset>0x18</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>OSTIMER0</name><baseAddress>0x400AD000</baseAddress><registers><register><name>CTRL</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>MRCC0</name><baseAddress>0x40091000</baseAddress><registers><register><name>CC0</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n<peripheral><name>SCG0</name><baseAddress>0x4008F000</baseAddress><registers><register><name>CSR</name><addressOffset>0</addressOffset><size>32</size><access>read-write</access><fields/></register></registers></peripheral>\n</peripherals></device>",
         "MCXA/MCXA156/MCXA156_COMMON.h": "#define __NVIC_PRIO_BITS 3U\ntypedef enum IRQn {\nLPUART0_IRQn = 31,\nGPIO3_IRQn = 74\n} IRQn_Type;\n",
-        "MCXA/MCXA156/gcc/startup_MCXA156.S": "__Vectors[] = {\nLPUART0_IRQHandler, // 47 : LPUART0\nGPIO3_IRQHandler, // 90 : GPIO3\n};\n",
+        "MCXA/MCXA156/gcc/startup_MCXA156.S": "__Vectors:\n"
+        + "\n".join(f".long {entry}" for entry in startup_entries)
+        + "\n.size __Vectors\n",
         "MCXA/MCXA156/gcc/MCXA156_flash.ld": "MEMORY {\n m_text (RX) : ORIGIN = 0x0, LENGTH = 0x10000\n}\n",
         "MCXA/MCXA156/gcc/MCXA156_ram.ld": "MEMORY {\n m_data (RW) : ORIGIN = 0x20000000, LENGTH = 0x1000\n}\n",
         "MCXA/MCXA156/drivers/fsl_clock.h": "kCLOCK_GateDMA0 = (0x0U << 16U) | (1U)), /*!< Clock gate name:\nkCLOCK_GateGPIO3 = (0x2U << 16U) | (7U)), /*!< Clock gate name:\nkCLOCK_GatePORT0 = (0x1U << 16U) | (12U)), /*!< Clock gate name:\nkCLOCK_GateLPUART0 = (0x0U << 16U) | (23U)), /*!< Clock gate name:\nkCLOCK_GateOSTIMER0 = (0x1U << 16U) | (1U)), /*!< Clock gate name:\nkFRO12M_to_LPUART0 = 1,\n",

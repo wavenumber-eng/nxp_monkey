@@ -163,6 +163,8 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
     _validate_comparison_model(right_value)
     left_projection = _comparison_projection(left_value)
     right_projection = _comparison_projection(right_value)
+    left_refs = _portable_projection_refs(left_value) if _is_portable_model(left_value) else {}
+    right_refs = _portable_projection_refs(right_value) if _is_portable_model(right_value) else {}
     findings: list[dict[str, Any]] = []
     keys = _comparison_keys(left_value, right_value, left_projection, right_projection)
     for key in keys:
@@ -186,8 +188,18 @@ def compare_models(*, left: str | Path, right: str | Path, output: str | Path) -
             "right": right_fact,
             "status": status,
         }
-        if portable_pair:
-            finding.update(_compatibility_evidence(left_value, right_value))
+        finding.update(
+            _comparison_evidence(
+                key,
+                left_value,
+                right_value,
+                left_path,
+                right_path,
+                portable_pair,
+                left_refs,
+                right_refs,
+            )
+        )
         findings.append(finding)
     coverage = _coverage(left_value, right_value)
     report = {
@@ -348,8 +360,24 @@ def _validate_record_uniqueness(model: ModelRecord) -> None:
         for register in block["registers"]:
             _require_unique(register["fields"], lambda item: item["name"], "field name")
             _require_unique(register["fields"], lambda item: item["bit_offset"], "field offset")
+            for field in register["fields"]:
+                values = field.get("enumerated_values", [])
+                _require_unique(values, lambda item: item["name"], "enumerated-value name")
+                _require_unique(values, lambda item: item["value"], "enumerated-value value")
     for derivative in model["derivatives"]:
         _validate_derivative_uniqueness(derivative)
+    for package in model["packages"]:
+        _require_unique(package["pins"], lambda item: item["pad"], "package-pin pad")
+        _require_unique(package["pins"], lambda item: item["position"], "package-pin position")
+        for pin in package["pins"]:
+            _require_unique(pin["signals"], lambda item: item["name"], "package-pin signal name")
+            _require_unique(pin["signals"], lambda item: item["mux"], "package-pin signal mux")
+    for board in model["boards"]:
+        _require_unique(
+            board["resources"],
+            lambda item: (item["type"], item["name"]),
+            "board resource type/name",
+        )
 
 
 def _validate_derivative_uniqueness(derivative: ModelRecord) -> None:
@@ -373,6 +401,9 @@ def _validate_derivative_uniqueness(derivative: ModelRecord) -> None:
         lambda item: (item["image"], item["name"], item["condition"]),
         "linker-region image/name/condition",
     )
+    for pin in derivative["global_pins"]:
+        _require_unique(pin["signals"], lambda item: item["name"], "global-pin signal name")
+        _require_unique(pin["signals"], lambda item: item["mux"], "global-pin signal mux")
 
 
 def _require_unique(
@@ -636,7 +667,7 @@ def _assemble_model(
             "device": derivative["device"],
             "package": item["name"],
             "pins": [],
-            "provenance_refs": [chip_ref, policy_ref],
+            "provenance_refs": [chip_ref],
             "sku": item["name"],
         }
         for item in chip["part"]
@@ -780,14 +811,23 @@ def _startup_interrupts(text: str) -> dict[str, int]:
             for index, name in enumerate(entries[16:])
             if name.endswith("_IRQHandler")
         }
-    numbered = re.findall(
-        r"^\s*([A-Za-z][A-Za-z0-9_]*)_IRQHandler\s*,\s*//\s*(\d+)\s*:",
-        text,
-        re.MULTILINE,
-    )
-    if not numbered:
-        raise ModelError("startup vector has no numbered device interrupt slots")
-    return {name: int(slot) - 16 for name, slot in numbered}
+    marker = text.find("// The vector table.")
+    core = text.find("// Core Level", marker)
+    end = text.find("};", core)
+    if marker < 0 or core < 0 or end < 0:
+        raise ModelError("startup C vector initializer is not delimited")
+    entries = []
+    for line in text[core:end].splitlines():
+        expression = line.split("//", 1)[0].strip()
+        if expression.endswith(","):
+            entries.append(expression.removesuffix(",").strip())
+    if len(entries) < 17:
+        raise ModelError("startup C vector has no device interrupt slots")
+    return {
+        name.removesuffix("_IRQHandler"): index
+        for index, name in enumerate(entries[16:])
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*_IRQHandler", name)
+    }
 
 
 def _linker_regions(
@@ -1367,20 +1407,202 @@ def _portable_hardware_projection(
     return projection
 
 
-def _compatibility_evidence(left: ModelRecord, right: ModelRecord) -> ModelRecord:
-    def source(model: ModelRecord, side: str) -> ModelRecord:
-        return {
-            "locators": sorted({item["locator"] for item in model["provenance"]}),
-            "model_id": model["model_id"],
-            "side": side,
-            "source_lock_ids": model["source_lock_ids"],
-        }
+def _portable_projection_refs(model: ModelRecord) -> dict[str, list[str]]:
+    index = {item["pointer"]: item["provenance_refs"] for item in model["fact_provenance"]}
+    result = _portable_base_projection_refs(model, index)
+    result.update(_portable_hardware_projection_refs(model, index))
+    return result
 
-    return {
-        "evidence": [left["model_id"], right["model_id"]],
-        "owner": "nxp-pac-and-embassy-board/pac-reconciliation",
-        "sources": [source(left, "left"), source(right, "right")],
+
+def _portable_base_projection_refs(
+    model: ModelRecord, index: dict[str, list[str]]
+) -> dict[str, list[str]]:
+    derivative = model["derivatives"][0]
+    result: dict[str, list[str]] = {}
+    _bind_projection_refs(
+        result, index, "/global_pin_scope", "/derivatives/0/global_pin_scope/value"
+    )
+    _bind_projection_refs(result, index, "/priority_bits", "/derivatives/0/priority_bits/value")
+    for position, item in enumerate(derivative["memories"]):
+        key = f"/memories/{item['name']}"
+        _bind_projection_refs(result, index, key, f"/derivatives/0/memories/{position}")
+    for position, item in enumerate(derivative["linker_regions"]):
+        condition = item["condition"] or "unconditional"
+        key = f"/linker_regions/{item['image']}/{item['name']}/{condition}"
+        _bind_projection_refs(result, index, key, f"/derivatives/0/linker_regions/{position}")
+    for position, item in enumerate(derivative["instances"]):
+        prefix = f"/derivatives/0/instances/{position}"
+        _bind_projection_refs(
+            result, index, f"/instances/{item['name']}/address", f"{prefix}/address"
+        )
+        _bind_projection_refs(result, index, f"/instances/{item['name']}/gate", f"{prefix}/gate")
+    for position, item in enumerate(derivative["interrupts"]):
+        _bind_projection_refs(
+            result,
+            index,
+            f"/interrupts/{item['name']}",
+            f"/derivatives/0/interrupts/{position}/number",
+        )
+    for position, item in enumerate(derivative["dma_requests"]):
+        _bind_projection_refs(
+            result,
+            index,
+            f"/dma/{item['name']}",
+            f"/derivatives/0/dma_requests/{position}",
+        )
+    for position, item in enumerate(model["packages"]):
+        _bind_projection_refs(
+            result, index, f"/packages/{item['sku']}", f"/packages/{position}/bond_out_status"
+        )
+    for pin_position, pin in enumerate(derivative["global_pins"]):
+        for signal_position, signal in enumerate(pin["signals"]):
+            _bind_projection_refs(
+                result,
+                index,
+                f"/pins/{pin['name']}/{signal['name']}",
+                f"/derivatives/0/global_pins/{pin_position}/signals/{signal_position}/mux",
+            )
+    return result
+
+
+def _portable_hardware_projection_refs(
+    model: ModelRecord, index: dict[str, list[str]]
+) -> dict[str, list[str]]:
+    derivative = model["derivatives"][0]
+    result: dict[str, list[str]] = {}
+    for position, item in enumerate(model["ip_blocks"]):
+        instance = item["id"].rsplit(".", 1)[-1].upper()
+        _bind_projection_refs(
+            result, index, f"/ip/{instance}/register_map", f"/ip_blocks/{position}/registers"
+        )
+    for position, item in enumerate(derivative["clocks"]):
+        _bind_projection_refs(
+            result, index, f"/clocks/{item['id']}", f"/derivatives/0/clocks/{position}"
+        )
+    for position, item in enumerate(derivative["resets"]):
+        _bind_projection_refs(
+            result, index, f"/resets/{item['id']}", f"/derivatives/0/resets/{position}"
+        )
+    _bind_projection_refs(result, index, "/flash/timing_rows", "/derivatives/0/flash/timing_rows")
+    for board_position, board in enumerate(model["boards"]):
+        prefix = f"/boards/{board_position}"
+        _bind_projection_refs(
+            result, index, f"/boards/{board['id']}/package_sku", f"{prefix}/package_sku"
+        )
+        for resource_position, resource in enumerate(board["resources"]):
+            key = f"/boards/{board['id']}/{resource['type']}/{resource['name']}"
+            _bind_projection_refs(result, index, key, f"{prefix}/resources/{resource_position}")
+    return result
+
+
+def _bind_projection_refs(
+    result: dict[str, list[str]],
+    index: dict[str, list[str]],
+    key: str,
+    *prefixes: str,
+) -> None:
+    refs = {
+        ref
+        for pointer, pointer_refs in index.items()
+        if any(pointer == prefix or pointer.startswith(prefix + "/") for prefix in prefixes)
+        for ref in pointer_refs
     }
+    result[key] = sorted(refs)
+
+
+def _comparison_evidence(
+    key: str,
+    left: ModelRecord,
+    right: ModelRecord,
+    left_path: Path,
+    right_path: Path,
+    portable_pair: bool,
+    left_refs: dict[str, list[str]],
+    right_refs: dict[str, list[str]],
+) -> ModelRecord:
+    rule = _comparison_rule_id(key, portable_pair)
+    sources = [
+        _comparison_source(left, left_path, key, "left", left_refs),
+        _comparison_source(right, right_path, key, "right", right_refs),
+    ]
+    identities = [rule]
+    for value, path in ((left, left_path), (right, right_path)):
+        identities.append(value["model_id"] if _is_portable_model(value) else _file_sha256(path))
+    return {
+        "evidence": identities,
+        "owner": "nxp-pac-and-embassy-board/pac-reconciliation",
+        "rule": rule,
+        "sources": sources,
+    }
+
+
+def _comparison_rule_id(key: str, portable_pair: bool) -> str:
+    if portable_pair:
+        return "conservative-portable-compatibility-v1"
+    if key.startswith("/ip/") and key.endswith("/register_map"):
+        return "exact-register-layout-pair-v2"
+    if key.endswith("/gate"):
+        return "exact-gate-representation-v1"
+    return "fixed-reproduction-inventory-v1"
+
+
+def _comparison_source(
+    value: ModelRecord,
+    path: Path,
+    key: str,
+    side: str,
+    refs: dict[str, list[str]],
+) -> ModelRecord:
+    if _is_portable_model(value):
+        return _portable_comparison_source(value, key, side, refs)
+    source = value.get("_adapter_sources", {}).get(key, {})
+    oracle_path = source.get("path", _canonical_oracle_path(path))
+    sha256 = source.get("sha256", _file_sha256(path))
+    return {
+        "locators": [f"{oracle_path}@sha256:{sha256}"],
+        "oracle_path": oracle_path,
+        "oracle_sha256": sha256,
+        "projection_rule": source.get("projection_rule", _adapter_projection_rule(value, key)),
+        "side": side,
+    }
+
+
+def _portable_comparison_source(
+    model: ModelRecord, key: str, side: str, projection_refs: dict[str, list[str]]
+) -> ModelRecord:
+    refs = projection_refs.get(key, [])
+    provenance = {item["id"]: item for item in model["provenance"]}
+    inputs = [
+        {
+            "id": ref,
+            "locator": provenance[ref]["locator"],
+            "sha256": provenance[ref]["sha256"],
+        }
+        for ref in refs
+    ]
+    return {
+        "locators": [item["locator"] for item in inputs],
+        "model_id": model["model_id"],
+        "provenance": inputs,
+        "side": side,
+        "source_lock_ids": model["source_lock_ids"],
+    }
+
+
+def _adapter_projection_rule(value: ModelRecord, key: str) -> str:
+    kind = value.get("_adapter_kind", "metadata")
+    category = key.strip("/").split("/", 1)[0] or "root"
+    return f"{kind}-{category}-projection-v1"
+
+
+def _canonical_oracle_path(path: Path) -> str:
+    parts = path.resolve().parts
+    anchors = (("data", "metadata"), ("nxp-pac", "src"))
+    for first, second in anchors:
+        for index in range(len(parts) - 1):
+            if parts[index : index + 2] == (first, second):
+                return "/".join(parts[index:])
+    return path.name
 
 
 def _adapter_kind(left: ModelRecord, right: ModelRecord) -> str:
@@ -1481,8 +1703,21 @@ def _load_comparison_input(path: Path) -> dict[str, Any]:
         re.MULTILINE,
     ):
         projection[f"/instances/{name}/address"] = _normalize_hex(address)
-    projection.update(_rust_register_projections(path, text))
-    return {"_adapter_kind": "rust", "_rust_projection": projection}
+    register_projection, register_sources = _rust_register_projections(path, text)
+    projection.update(register_projection)
+    base_source = {
+        "path": _canonical_oracle_path(path),
+        "sha256": _file_sha256(path),
+    }
+    sources = {
+        key: {**base_source, "projection_rule": _rust_projection_rule(key)} for key in projection
+    }
+    sources.update(register_sources)
+    return {
+        "_adapter_kind": "rust",
+        "_adapter_sources": sources,
+        "_rust_projection": projection,
+    }
 
 
 def _register_map_signature(registers: list[ModelRecord]) -> ModelRecord:
@@ -1504,7 +1739,7 @@ def _register_map_signature(registers: list[ModelRecord]) -> ModelRecord:
     }
 
 
-def _rust_register_projections(path: Path, chip_text: str) -> ModelRecord:
+def _rust_register_projections(path: Path, chip_text: str) -> tuple[ModelRecord, ModelRecord]:
     module_paths = {
         module: relative
         for relative, module in re.findall(
@@ -1522,7 +1757,9 @@ def _rust_register_projections(path: Path, chip_text: str) -> ModelRecord:
         if _RELEVANT.fullmatch(name)
     }
     signatures: ModelRecord = {}
+    sources: ModelRecord = {}
     module_cache: dict[str, ModelRecord] = {}
+    source_cache: dict[str, ModelRecord] = {}
     for instance, module in instance_modules.items():
         relative = module_paths.get(module)
         if relative is None:
@@ -1532,8 +1769,22 @@ def _rust_register_projections(path: Path, chip_text: str) -> ModelRecord:
             module_cache[module] = _rust_register_map_signature(
                 module_path.read_text(encoding="utf-8")
             )
+            source_cache[module] = {
+                "path": _canonical_oracle_path(module_path),
+                "projection_rule": "rust-register-layout-v2",
+                "sha256": _file_sha256(module_path),
+            }
         signatures[f"/ip/{instance}/register_map"] = module_cache[module]
-    return signatures
+        sources[f"/ip/{instance}/register_map"] = source_cache[module]
+    return signatures, sources
+
+
+def _rust_projection_rule(key: str) -> str:
+    if key == "/priority_bits":
+        return "rust-nvic-priority-v1"
+    if key.startswith("/interrupts/"):
+        return "rust-interrupt-enum-v1"
+    return "rust-instance-address-v1"
 
 
 def _rust_register_map_signature(text: str) -> ModelRecord:
@@ -1891,6 +2142,13 @@ def _fact_provenance(model: dict[str, Any]) -> list[dict[str, Any]]:
     entries = []
     for layer in ("ip_blocks", "derivatives", "packages", "boards"):
         entries.extend(_walk_facts(model[layer], f"/{layer}", []))
+    policy_refs = sorted(
+        item["id"] for item in model["provenance"] if item["source_kind"] == "policy"
+    )
+    if policy_refs:
+        for item in entries:
+            if re.fullmatch(r"/packages/\d+/bond_out_status", item["pointer"]):
+                item["provenance_refs"] = policy_refs
     return sorted(entries, key=lambda item: item["pointer"])
 
 
