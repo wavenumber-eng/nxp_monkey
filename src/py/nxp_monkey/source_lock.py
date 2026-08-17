@@ -25,6 +25,7 @@ from ._version import __version__
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _HTTPS_RE = re.compile(r"^https://")
 _PROFILE_PLACEHOLDER = "${PROFILE}"
+_OFFLINE_SITE_PATH = Path(__file__).with_name("_offline_site")
 
 
 class SourceLockError(RuntimeError):
@@ -143,7 +144,7 @@ def _resolve_manifest_state(
         projects, selected_names = _project_inventory(
             manifest, selection, set(profile["optional_projects"])
         )
-        _fetch_selected_projects(projects, cache_root)
+        _fetch_consumed_projects(profile["consumed_sources"], projects, cache_root)
         west_yml = _git_blob(manifest_git, manifest_revision, "west.yml")
         board_path = f"boards/{board}.yml"
         board_config = _git_blob(manifest_git, manifest_revision, board_path)
@@ -259,12 +260,17 @@ def _validate_project_availability(
         raise SourceLockError(f"selected project {project.name!r} is unavailable")
 
 
-def _fetch_selected_projects(projects: list[dict], cache_root: Path) -> None:
-    commits = {
-        (project["url"], project["resolved_commit"])
-        for project in projects
-        if project["selected"]
-    }
+def _fetch_consumed_projects(
+    source_sets: list[dict], projects: list[dict], cache_root: Path
+) -> None:
+    project_map = {project["name"]: project for project in projects}
+    consumed_names = {source_set["project"] for source_set in source_sets}
+    commits: set[tuple[str, str]] = set()
+    for name in consumed_names:
+        project = project_map.get(name)
+        if project is None or not project["selected"]:
+            raise SourceLockError(f"consumed input project is not selected: {name!r}")
+        commits.add((project["url"], project["resolved_commit"]))
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [
             executor.submit(_ensure_repository_commit, url, commit, cache_root, True)
@@ -397,9 +403,13 @@ def verify_source_lock(
             f"lock ID mismatch: expected {expected_id}, got {payload.get('lock_id')!r}"
         )
     cache_root = Path(cache_dir).resolve() / "source-v0"
-    _verify_cached_record(cache_root / "profiles", payload["resolver"]["profile_spec"])
+    profile_bytes = _verify_cached_record(
+        cache_root / "profiles", payload["resolver"]["profile_spec"]
+    )
+    profile = _parse_profile(profile_bytes, "cached profile specification")
+    _verify_profile_binding(payload, profile)
     _verify_cached_record(cache_root / "policies", payload["license_policy"])
-    _verify_manifest_cache(payload, cache_root)
+    _verify_manifest_cache(payload, profile, cache_root)
     _verify_project_cache(payload, cache_root)
     return {
         "lock_id": expected_id,
@@ -415,13 +425,35 @@ def _load_lock(lock: str | Path | dict) -> dict:
     return lock
 
 
-def _verify_cached_record(directory: Path, record: dict) -> None:
+def _verify_cached_record(directory: Path, record: dict) -> bytes:
     cached = directory / record["sha256"]
-    if not cached.is_file() or _sha256(cached.read_bytes()) != record["sha256"]:
+    if not cached.is_file():
         raise SourceLockError(f"missing or corrupt cached record: {record['sha256']}")
+    data = cached.read_bytes()
+    if _sha256(data) != record["sha256"]:
+        raise SourceLockError(f"missing or corrupt cached record: {record['sha256']}")
+    return data
 
 
-def _verify_manifest_cache(payload: dict, cache_root: Path) -> None:
+def _verify_profile_binding(payload: dict, profile: dict) -> None:
+    expected_kex = {
+        "license_evidence": sorted(profile["kex"]["license_evidence"]),
+        "reason": profile["kex"]["reason"],
+        "status": "not-used",
+    }
+    if payload["resolver"]["profile_spec"]["path"] != profile["canonical_path"]:
+        raise SourceLockError("cached profile path differs from the lock")
+    if payload["request"]["profile"] != profile["profile"]:
+        raise SourceLockError("cached profile name differs from the lock")
+    if payload["manifest"]["label"] != profile["manifest_label"]:
+        raise SourceLockError("cached profile manifest label differs from the lock")
+    if payload["license_policy"] != profile["license_policy"]:
+        raise SourceLockError("cached profile license policy differs from the lock")
+    if payload["kex"] != expected_kex:
+        raise SourceLockError("cached profile KEX disposition differs from the lock")
+
+
+def _verify_manifest_cache(payload: dict, profile: dict, cache_root: Path) -> None:
     manifest = payload["manifest"]
     manifest_git = _repository_path(cache_root, manifest["url"])
     _require_cached_commit(manifest_git, manifest["commit"])
@@ -434,18 +466,14 @@ def _verify_manifest_cache(payload: dict, cache_root: Path) -> None:
     _verify_manifest_oracle(
         manifest_git,
         manifest["commit"],
-        payload["request"]["board"],
-        manifest["freeze_output"],
-        manifest["selection_output"],
+        payload,
+        profile,
+        cache_root,
     )
 
 
 def _verify_project_cache(payload: dict, cache_root: Path) -> None:
     project_map = {project["name"]: project for project in payload["projects"]}
-    for project in payload["projects"]:
-        if project["selected"]:
-            repo = _repository_path(cache_root, project["url"])
-            _require_cached_commit(repo, project["resolved_commit"])
     for consumed in payload["closures"]["consumed_inputs"]:
         project = project_map[consumed["project"]]
         repo = _repository_path(cache_root, project["url"])
@@ -454,10 +482,17 @@ def _verify_project_cache(payload: dict, cache_root: Path) -> None:
 
 def _load_profile(path: Path) -> dict:
     try:
-        profile = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        data = path.read_bytes()
+    except OSError as exc:
         raise SourceLockError(f"cannot read profile specification {path}: {exc}") from exc
-    profile = cast(object, profile)
+    return _parse_profile(data, str(path))
+
+
+def _parse_profile(data: bytes, label: str) -> dict:
+    try:
+        profile = cast(object, json.loads(data.decode()))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SourceLockError(f"cannot read profile specification {label}: {exc}") from exc
     if not isinstance(profile, dict):
         raise SourceLockError("profile specification must be a JSON object")
     _validate_profile(profile)
@@ -532,6 +567,8 @@ def _resolve_consumed_inputs(
     source_sets: list[dict],
     projects: list[dict],
     cache_root: Path,
+    *,
+    offline: bool = False,
 ) -> list[dict]:
     project_map = {project["name"]: project for project in projects}
     resolved = []
@@ -549,7 +586,7 @@ def _resolve_consumed_inputs(
                 )
         repo = _repository_path(cache_root, project["url"])
         for path in source_set["paths"]:
-            data = _git_blob(repo, project["resolved_commit"], path)
+            data = _git_blob(repo, project["resolved_commit"], path, offline=offline)
             resolved.append(
                 {
                     "disposition": disposition,
@@ -659,6 +696,7 @@ def _validate_lock_semantics(lock: dict) -> None:
         _validate_lock_header(lock)
         selected = _validate_projects(lock["projects"])
         _validate_closures(lock["closures"], lock["projects"], selected)
+        _validate_manifest_record(lock["manifest"])
         _validate_lock_revisions(lock)
         _validate_command_templates(lock["resolver"])
     except (KeyError, TypeError) as exc:
@@ -674,6 +712,7 @@ def _validate_lock_header(lock: dict) -> None:
         raise SourceLockError("unsupported canonicalization")
     if set(lock["kex"]) != {"status", "license_evidence", "reason"}:
         raise SourceLockError("KEX not-used record cannot carry payload identity")
+    _require_sorted_unique(lock["kex"]["license_evidence"], "KEX license evidence")
 
 
 def _validate_projects(projects: list[dict]) -> set[str]:
@@ -727,11 +766,29 @@ def _validate_consumed_inputs(consumed_inputs: list[dict], selected: set[str]) -
         if key in seen or consumed["project"] not in selected:
             raise SourceLockError("consumed inputs must be unique and selected")
         seen.add(key)
+        _require_sorted_unique(
+            consumed["license_evidence"], "consumed-input license evidence"
+        )
         if any(
             consumed["disposition"][permission] != "allow"
             for permission in ("redistribute", "generate", "ai_input")
         ):
             raise SourceLockError("consumed input policy must fail closed")
+
+
+def _validate_manifest_record(manifest: dict) -> None:
+    imports = manifest["imports"]
+    ordered = sorted(imports, key=lambda item: (item["owner_project"], item["path"]))
+    if imports != ordered:
+        raise SourceLockError("manifest imports are not in canonical order")
+    keys = [(item["owner_project"], item["path"]) for item in imports]
+    if len(keys) != len(set(keys)):
+        raise SourceLockError("manifest imports must be unique")
+
+
+def _require_sorted_unique(values: list[str], label: str) -> None:
+    if values != sorted(set(values)):
+        raise SourceLockError(f"{label} must be unique and canonically ordered")
 
 
 def _validate_lock_revisions(lock: dict) -> None:
@@ -884,6 +941,20 @@ def _git_environment(*, offline: bool) -> dict[str, str]:
 def _west_environment(*, offline: bool = False) -> dict[str, str]:
     environment = _git_environment(offline=offline)
     environment.update({"NO_COLOR": "1", "PYTHONUTF8": "1"})
+    if offline:
+        existing = environment.get("PYTHONPATH")
+        paths = [str(_OFFLINE_SITE_PATH), *([existing] if existing else [])]
+        environment.update(
+            {
+                "ALL_PROXY": "http://127.0.0.1:9",
+                "GIT_ALLOW_PROTOCOL": "file",
+                "HTTP_PROXY": "http://127.0.0.1:9",
+                "HTTPS_PROXY": "http://127.0.0.1:9",
+                "NO_PROXY": "",
+                "NXP_MONKEY_OFFLINE": "1",
+                "PYTHONPATH": os.pathsep.join(paths),
+            }
+        )
     return environment
 
 
@@ -928,10 +999,11 @@ def _cache_bytes(target: Path, data: bytes) -> None:
 def _verify_manifest_oracle(
     manifest_git: Path,
     commit: str,
-    board: str,
-    expected_resolution: str,
-    expected_selection: str,
+    payload: dict,
+    profile: dict,
+    cache_root: Path,
 ) -> None:
+    board = payload["request"]["board"]
     with tempfile.TemporaryDirectory(prefix="nxp-monkey-verify-") as temporary:
         workspace = Path(temporary) / "workspace"
         checkout = workspace / "manifests"
@@ -960,7 +1032,69 @@ def _verify_manifest_oracle(
                 offline=True,
             )
         )
-    if resolution != expected_resolution:
+        _verify_replayed_semantics(
+            workspace,
+            manifest_git,
+            commit,
+            resolution,
+            selection,
+            payload,
+            profile,
+            cache_root,
+        )
+    if resolution != payload["manifest"]["freeze_output"]:
         raise SourceLockError("offline west manifest replay differs from the lock")
-    if selection != expected_selection:
+    if selection != payload["manifest"]["selection_output"]:
         raise SourceLockError("offline update_board replay differs from the lock")
+
+
+def _verify_replayed_semantics(
+    workspace: Path,
+    manifest_git: Path,
+    commit: str,
+    resolution: str,
+    selection_output: str,
+    payload: dict,
+    profile: dict,
+    cache_root: Path,
+) -> None:
+    try:
+        from west.manifest import Manifest
+    except ImportError as exc:  # pragma: no cover - dependency error path
+        raise SourceLockError("west is unavailable for offline replay") from exc
+    manifest = Manifest.from_topdir(topdir=workspace)
+    selection = _load_yaml(selection_output, "replayed board selection output")
+    projects, selected = _project_inventory(
+        manifest, selection, set(profile["optional_projects"])
+    )
+    projects = sorted(projects, key=lambda item: (item["name"], item["path"]))
+    expected_inputs = _resolve_consumed_inputs(
+        profile["consumed_sources"], projects, cache_root, offline=True
+    )
+    west_yml = _git_blob(manifest_git, commit, "west.yml", offline=True)
+    expected_imports = _collect_local_imports(manifest_git, commit, west_yml)
+    expected_optional = sorted(item["name"] for item in projects if item["optional"])
+    checks = (
+        (payload["projects"], projects, "project inventory"),
+        (payload["manifest"]["group_filter"], list(manifest.group_filter), "group filter"),
+        (payload["manifest"]["imports"], expected_imports, "manifest imports"),
+        (
+            payload["closures"]["board_reference_projects"],
+            sorted(selected),
+            "board reference closure",
+        ),
+        (
+            payload["closures"]["optional_projects"],
+            expected_optional,
+            "optional project closure",
+        ),
+        (payload["closures"]["consumed_inputs"], expected_inputs, "consumed inputs"),
+    )
+    for actual, expected, label in checks:
+        if actual != expected:
+            raise SourceLockError(f"replayed {label} differs from the lock")
+    expected_board_path = f"boards/{payload['request']['board']}.yml"
+    if payload["manifest"]["board_config"]["path"] != expected_board_path:
+        raise SourceLockError("replayed board path differs from the lock")
+    if resolution != payload["manifest"]["freeze_output"]:
+        raise SourceLockError("replayed manifest resolution differs from the lock")

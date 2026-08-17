@@ -10,6 +10,7 @@ import pytest
 from nxp_monkey import SourceLockError, resolve_source_lock, verify_source_lock
 from nxp_monkey.source_lock import (
     _repository_path,
+    _validate_lock_semantics,
     canonical_json_bytes,
     source_lock_id,
 )
@@ -64,7 +65,9 @@ def _build_offline_fixture(tmp_path: Path) -> tuple[dict, Path]:
   self:
     path: manifests
     west-commands: scripts/west_commands.yml
-    import: submanifests/base.yml
+    import:
+    - submanifests/base.yml
+    - submanifests/extra.yml
 """.encode()
     board_yml = b"repo_list:\n  - core\n"
     imported_yml = b"manifest:\n  projects: []\n"
@@ -75,7 +78,20 @@ def _build_offline_fixture(tmp_path: Path) -> tuple[dict, Path]:
     class: FixtureUpdateBoard
     help: fixture board selector
 """
-    extension_py = b"""from west.commands import WestCommand
+    extension_py = b"""import os
+import socket
+import subprocess
+
+from west.commands import WestCommand
+
+def assert_offline_denied(operation):
+    try:
+        operation()
+    except RuntimeError as exc:
+        if 'offline network access denied' in str(exc):
+            return
+        raise
+    raise RuntimeError('offline guard did not deny network operation')
 
 class FixtureUpdateBoard(WestCommand):
     def __init__(self):
@@ -88,6 +104,11 @@ class FixtureUpdateBoard(WestCommand):
         return parser
 
     def do_run(self, args, unknown_args=None):
+        if os.environ.get('NXP_MONKEY_OFFLINE') == '1':
+            assert_offline_denied(lambda: socket.getaddrinfo('example.com', 443))
+            assert_offline_denied(
+                lambda: subprocess.run(['curl', 'https://example.com'], check=False)
+            )
         print('core:\\n  display_name: Core')
 """
     manifest_bare, manifest_commit = _bare_repository(
@@ -99,6 +120,7 @@ class FixtureUpdateBoard(WestCommand):
             "scripts/west_commands.yml": extension_yml,
             "scripts/fixture.py": extension_py,
             "submanifests/base.yml": imported_yml,
+            "submanifests/extra.yml": imported_yml,
         },
     )
 
@@ -116,7 +138,45 @@ class FixtureUpdateBoard(WestCommand):
     policy_path = cache_root / "policies" / policy_sha
     policy_path.parent.mkdir(parents=True)
     policy_path.write_bytes(policy)
-    profile = b'{"schema_version":"0"}\n'
+    disposition = {
+        "ai_input": "allow",
+        "cache": "allow",
+        "generate": "allow",
+        "redistribute": "allow",
+        "retain": "allow",
+    }
+    license_evidence = ["core:devices/MCXFIXTURE.h#SPDX"]
+    kex = {
+        "license_evidence": ["policy#kex"],
+        "reason": "KEX is excluded from this synthetic Git-only fixture.",
+        "status": "not-used",
+    }
+    policy_record = {
+        "id": "fixture-policy-v0",
+        "path": "docs/research/fixture-policy.md",
+        "revision": "fixture",
+        "sha256": policy_sha,
+    }
+    profile = canonical_json_bytes(
+        {
+            "canonical_path": "source-locks/profiles/fixture.json",
+            "consumed_sources": [
+                {
+                    "disposition": disposition,
+                    "license_evidence": license_evidence,
+                    "license_expression": "BSD-3-Clause",
+                    "paths": ["devices/MCXFIXTURE.h"],
+                    "project": "core",
+                }
+            ],
+            "kex": kex,
+            "license_policy": policy_record,
+            "manifest_label": "fixture",
+            "optional_projects": [],
+            "profile": "pac-v0",
+            "schema_version": "0",
+        }
+    )
     profile_sha = _sha(profile)
     profile_path = cache_root / "profiles" / profile_sha
     profile_path.parent.mkdir(parents=True)
@@ -162,14 +222,8 @@ class FixtureUpdateBoard(WestCommand):
             "board_reference_projects": ["core"],
             "consumed_inputs": [
                 {
-                    "disposition": {
-                        "ai_input": "allow",
-                        "cache": "allow",
-                        "generate": "allow",
-                        "redistribute": "allow",
-                        "retain": "allow",
-                    },
-                    "license_evidence": ["core:devices/MCXFIXTURE.h#SPDX"],
+                    "disposition": disposition,
+                    "license_evidence": license_evidence,
                     "license_expression": "BSD-3-Clause",
                     "path": "devices/MCXFIXTURE.h",
                     "project": "core",
@@ -178,29 +232,27 @@ class FixtureUpdateBoard(WestCommand):
             ],
             "optional_projects": [],
         },
-        "kex": {
-            "license_evidence": ["policy#kex"],
-            "reason": "KEX is excluded from this synthetic Git-only fixture.",
-            "status": "not-used",
-        },
-        "license_policy": {
-            "id": "fixture-policy-v0",
-            "path": "docs/research/fixture-policy.md",
-            "revision": "fixture",
-            "sha256": policy_sha,
-        },
+        "kex": kex,
+        "license_policy": policy_record,
         "manifest": {
             "board_config": {"path": "boards/fixture.yml", "sha256": _sha(board_yml)},
             "commit": manifest_commit,
             "freeze_output": frozen,
             "freeze_output_sha256": _sha(frozen.encode()),
-            "group_filter": ["-optional"],
+            "group_filter": [],
             "imports": [
                 {
                     "import_path": ["west.yml", "submanifests/base.yml"],
                     "owner_commit": manifest_commit,
                     "owner_project": "manifest",
                     "path": "submanifests/base.yml",
+                    "sha256": _sha(imported_yml),
+                },
+                {
+                    "import_path": ["west.yml", "submanifests/extra.yml"],
+                    "owner_commit": manifest_commit,
+                    "owner_project": "manifest",
+                    "path": "submanifests/extra.yml",
                     "sha256": _sha(imported_yml),
                 }
             ],
@@ -302,7 +354,45 @@ def test_offline_verification_rejects_corrupt_blob_hash(offline_fixture):
     lock = copy.deepcopy(original)
     lock["closures"]["consumed_inputs"][0]["sha256"] = "0" * 64
     lock["lock_id"] = source_lock_id(lock)
-    with pytest.raises(SourceLockError, match="blob hash mismatch"):
+    with pytest.raises(SourceLockError, match="consumed inputs"):
+        verify_source_lock(lock=lock, cache_dir=cache, offline=True)
+
+
+def test_offline_verification_binds_replayed_project_inventory(offline_fixture):
+    original, cache = offline_fixture
+    lock = copy.deepcopy(original)
+    lock["projects"][0]["active"] = False
+    lock["lock_id"] = source_lock_id(lock)
+    with pytest.raises(SourceLockError, match="project inventory"):
+        verify_source_lock(lock=lock, cache_dir=cache, offline=True)
+
+
+def test_offline_verification_binds_profile_consumed_inputs(offline_fixture):
+    original, cache = offline_fixture
+    lock = copy.deepcopy(original)
+    lock["closures"]["consumed_inputs"] = []
+    lock["lock_id"] = source_lock_id(lock)
+    with pytest.raises(SourceLockError, match="consumed inputs"):
+        verify_source_lock(lock=lock, cache_dir=cache, offline=True)
+
+
+def test_offline_verification_binds_profile_license_evidence(offline_fixture):
+    original, cache = offline_fixture
+    lock = copy.deepcopy(original)
+    consumed = lock["closures"]["consumed_inputs"][0]
+    consumed["license_expression"] = "Invented-1.0"
+    consumed["license_evidence"] = ["invented:evidence"]
+    lock["lock_id"] = source_lock_id(lock)
+    with pytest.raises(SourceLockError, match="consumed inputs"):
+        verify_source_lock(lock=lock, cache_dir=cache, offline=True)
+
+
+def test_semantics_reject_noncanonical_import_order(offline_fixture):
+    original, cache = offline_fixture
+    lock = copy.deepcopy(original)
+    lock["manifest"]["imports"].reverse()
+    lock["lock_id"] = source_lock_id(lock)
+    with pytest.raises(SourceLockError, match="canonical order"):
         verify_source_lock(lock=lock, cache_dir=cache, offline=True)
 
 
@@ -316,7 +406,7 @@ def test_semantics_reject_fail_open_consumed_input(offline_fixture):
 
 
 def test_semantics_allow_explicit_unavailable_inactive_project(offline_fixture):
-    original, cache = offline_fixture
+    original, _ = offline_fixture
     lock = copy.deepcopy(original)
     lock["projects"].append(
         {
@@ -332,8 +422,7 @@ def test_semantics_allow_explicit_unavailable_inactive_project(offline_fixture):
             "url": "https://example.invalid/private.git",
         }
     )
-    lock["lock_id"] = source_lock_id(lock)
-    assert verify_source_lock(lock=lock, cache_dir=cache, offline=True)["offline"] is True
+    _validate_lock_semantics(lock)
 
 
 def test_canonical_identity_is_order_independent_for_object_keys(offline_fixture):

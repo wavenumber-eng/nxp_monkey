@@ -16,6 +16,13 @@ this project adheres to date-based PEP 440 versions per ADR-0001
 - Added public `resolve_source_lock`, `verify_source_lock`, and
   `SourceLockError` interfaces plus the `nxp-monkey source` command group.
 
+### Changed
+
+- Offline verification now derives and binds the complete west inventory,
+  selection, imports, profile, consumed closure, and license evidence while a
+  subprocess guard denies DNS, sockets, network Git verbs, and unrelated child
+  programs. Resolution caches only declared, cache-permitted consumed projects.
+
 ## [2026.6.9] - 2026-06-09
 
 ### Added

@@ -21,10 +21,11 @@
   <h2>resolve_source_lock</h2>
   <p><strong>Kind:</strong> function.</p>
   <p>
-    Resolves a pinned official manifest, board closure, exact selected commits,
-    reviewed consumed files, and license evidence into canonical source-lock
-    v0 JSON. The function writes only the requested output and reusable Git and
-    policy cache objects.
+    Resolves a pinned official manifest, board closure, exact selected
+    identities, reviewed consumed files, and license evidence into canonical
+    source-lock v0 JSON. Only repositories containing consumed files are
+    downloaded. The function writes only the requested output and reusable Git
+    and policy cache objects.
   </p>
 </section>
 
@@ -32,9 +33,10 @@
   <h2>verify_source_lock</h2>
   <p><strong>Kind:</strong> function.</p>
   <p>
-    Recomputes source-lock identity and verifies all retained Git objects,
-    blobs, and license policy bytes. V0 requires explicit offline mode and
-    never repairs or fetches a missing cache object.
+    Recomputes source-lock identity; binds the cached profile, replayed west
+    inventory/selection, closures, licenses, and imports; and verifies all
+    retained Git objects, blobs, and license policy bytes. V0 requires explicit
+    network-guarded offline mode and never repairs or fetches a missing object.
   </p>
 </section>
 </body>

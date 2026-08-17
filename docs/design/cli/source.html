@@ -34,9 +34,10 @@ nxp-monkey source verify --lock LOCK.json --cache CACHE --offline</code></pre>
     west 1.5.0 parses imports, and the pinned manifest's
     <code>update_board --list-repo</code> command selects the board closure.
     The resolver records all manifest projects, including explicitly
-    unavailable inactive projects, while downloading only the selected
-    closure. A reviewed profile can add exact optional manifest projects and
-    names the smaller file-level consumed closure and its license dispositions.
+    unavailable inactive projects, while downloading only repositories that
+    contain profile-declared consumed files with an allowed cache disposition.
+    A reviewed profile can add exact optional manifest projects and names the
+    smaller file-level consumed closure and its license dispositions.
   </p>
   <p>
     Because every active project in the supported baseline already has an
@@ -49,9 +50,13 @@ nxp-monkey source verify --lock LOCK.json --cache CACHE --offline</code></pre>
   <h2>Offline verification</h2>
   <p>
     Verification requires <code>--offline</code>. It recomputes the lock ID,
-    embedded-output hashes, manifest/import/board blobs, every selected commit,
-    every consumed file, and the retained license policy. Git lazy fetching is
-    disabled, so a missing object fails rather than reaching the network.
+    embedded-output hashes, manifest/import/board blobs, the cached profile,
+    every consumed commit/file, and the retained license policy. It derives the
+    full project inventory and both closures again from west and requires exact
+    equality with the lock. Git lazy fetching is disabled, Python DNS/socket
+    calls are denied, and west-extension child processes are restricted to
+    local Git/Python operations, so a missing object fails rather than reaching
+    the network.
   </p>
 
   <h2>Determinism</h2>

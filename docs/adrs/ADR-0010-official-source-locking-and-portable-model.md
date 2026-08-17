@@ -126,10 +126,11 @@ The required `fact_provenance` index maps each carried leaf JSON Pointer in a
 model to one or more source records. Record-level `provenance_refs` are useful
 grouping metadata but do not replace this field-level coverage invariant.
 
-Two clean-cache resolutions of the same explicit inputs must be byte-identical.
-Offline verification must validate schema version, lock ID, every selected
-commit, every raw content hash, and every license-policy reference without
-network access.
+Two independently empty-cache resolutions of each device's explicit inputs
+must be byte-identical. Offline verification must validate schema version,
+lock ID, the replay-derived selected inventory, every cache-allowed consumed
+commit/content hash, the cached profile, and every license-policy reference
+without network access.
 
 ### Model layering and source precedence
 
@@ -144,13 +145,17 @@ The portable model keeps four independently versioned layers:
 There is no universal "preferred NXP source." Precedence is field-class and
 scope specific:
 
-- exact-SKU/package records override family-level availability claims;
+- exact-SKU/package records override family-level availability claims when
+  their source class is permitted; v0 retains open-source package identifiers
+  but marks per-package bond-out unavailable rather than inferring it;
 - CMSIS headers and startup/linker material are primary for derivative
   interrupt and memory integration facts;
 - licensed SVD/register descriptions are primary for register shape;
 - when a future policy explicitly permits KEX, exact-package data may be a
   signal-mux/package corroboration source; KEX is not a v0 input;
-- board BSP and schematic records are primary for board wiring; and
+- open-licensed board BSP records and retained hardware observations are
+  primary for v0 board wiring; account-gated schematic/design content is not a
+  v0 input without separate permission; and
 - the pinned SDK manifest is primary for project selection and revisions.
 
 Agreement is retained as corroboration. A disagreement is never silently
@@ -168,6 +173,14 @@ default for a missing or ambiguous disposition is deny.
   the extent allowed by their repository SBOM, file-level SPDX markers, and
   governing license. The manifest repository's BSD-3-Clause license does not
   automatically license every selected project or file.
+- Board selection does not authorize repository caching. Resolution fetches
+  only repositories containing declared consumed files with `cache = allow`;
+  other selected project identities are replayed from the pinned manifest
+  without downloading their repositories.
+- Public/account-gated NXP data sheets, schematics, and design archives do not
+  carry an open-source grant for this workflow and are excluded from v0. Their
+  absence is represented explicitly: per-package bond-out is unavailable, and
+  BSP-derived board wiring requires later hardware confirmation.
 - The current MCUXpresso Config Tools license prohibits use of the licensed
   software as data or training input to AI models and restricts publication of
   reports associated with its use. Consequently KEX/Config Tools payloads are

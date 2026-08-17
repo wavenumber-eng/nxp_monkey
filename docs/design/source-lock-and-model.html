@@ -40,8 +40,10 @@
     parser. The supported baseline records west's resolved active-manifest
     output as frozen because every included revision is already exact;
     inaccessible moving entries in inactive groups retain an explicit
-    unavailable status and cannot be selected. Verification checks every
-    selected commit and hash. Offline verification
+    unavailable status and cannot be selected. Verification derives every
+    selected identity from the pinned manifest, while it caches and checks
+    commits/blobs only for declared consumed inputs with an allowed cache
+    disposition. Offline verification
     performs no DNS or HTTP access.
   </p>
 </section>
@@ -52,9 +54,17 @@
   <ol>
     <li>peripheral IP and register blocks;</li>
     <li>SoC derivative topology and constraints;</li>
-    <li>package/SKU availability and pins; and</li>
+    <li>package/SKU availability and pins, with unavailable bond-out facts
+      explicit when no permitted source exists; and</li>
     <li>board wiring and resources.</li>
   </ol>
+  <p>
+    V0 excludes account-gated NXP data sheets, schematics, and design archives
+    because no open-source or AI-input permission is retained. It preserves
+    open-source package identifiers and global pin topology without inventing
+    per-package bond-out. Board wiring is sourced from the open-licensed BSP
+    and must be confirmed by retained hardware observation.
+  </p>
   <p>
     The MCXA156 board increment requires automated facts for core identity,
     priority bits, memories/linker regions, interrupts, GPIO, clocks/resets,
