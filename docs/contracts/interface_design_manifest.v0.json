@@ -256,6 +256,27 @@
       "test_file": "tests/L3_public_workflows/test_model.py"
     },
     {
+      "symbol": "KexLockError",
+      "kind": "exception",
+      "module": "nxp_monkey.kex_lock",
+      "design_doc": "docs/design/api/kex_lock.html",
+      "test_file": "tests/L3_public_workflows/test_kex_lock.py"
+    },
+    {
+      "symbol": "create_kex_acquisition_lock",
+      "kind": "function",
+      "module": "nxp_monkey.kex_lock",
+      "design_doc": "docs/design/api/kex_lock.html",
+      "test_file": "tests/L3_public_workflows/test_kex_lock.py"
+    },
+    {
+      "symbol": "verify_kex_acquisition_lock",
+      "kind": "function",
+      "module": "nxp_monkey.kex_lock",
+      "design_doc": "docs/design/api/kex_lock.html",
+      "test_file": "tests/L3_public_workflows/test_kex_lock.py"
+    },
+    {
       "symbol": "normalize_model",
       "kind": "function",
       "module": "nxp_monkey.model",

@@ -2,7 +2,7 @@
 
 Walks a ``processors/<PART>/<VARIANT>/`` tree (or any directory of NXP
 KEX XML files) and emits a parallel JSON tree, one ``.json`` per
-``.xml``. Designed for authorized non-AI JSON consumers that do not have an
+``.xml``. Designed for authorized JSON consumers that do not have an
 XML parser.
 
 Conversion convention (xmltodict-style, namespace-stripped tags):

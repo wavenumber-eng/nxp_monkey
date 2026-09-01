@@ -19,6 +19,7 @@ from .kex_client import (
     list_versions,
     portfolio_latest_map,
 )
+from .kex_lock import KexLockError, create_kex_acquisition_lock, verify_kex_acquisition_lock
 from .model import ModelError, compare_models, normalize_model, validate_model_semantics
 from .models import (
     ApiVersion,
@@ -46,6 +47,7 @@ __all__ = [
     "DEFAULT_VARIANT",
     "IndexMeta",
     "KexClient",
+    "KexLockError",
     "NxpFetchError",
     "ModelError",
     "PackageVariant",
@@ -61,6 +63,7 @@ __all__ = [
     "cache_path",
     "cache_size",
     "compare_models",
+    "create_kex_acquisition_lock",
     "details",
     "details_from_cache",
     "fetch",
@@ -78,6 +81,7 @@ __all__ = [
     "resolve_source_lock",
     "search",
     "verify_source_lock",
+    "verify_kex_acquisition_lock",
     "validate_model_semantics",
     "xml_file_to_dict",
 ]

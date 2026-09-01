@@ -26,6 +26,7 @@ PUBLIC_COMMANDS = (
     "details",
     "cache",
     "source",
+    "kex-lock",
     "model",
     "help",
 )

@@ -5,26 +5,29 @@ data discovery, fetch, indexing, and local cache inspection. Keep changes
 focused on stable CLI behavior, library-first APIs, and public documentation
 contracts.
 
-## KEX AI Boundary
+## KEX Data Boundary
 
-NXP's current Config Tools license prohibits using the licensed software as
-AI/model input. AI-assisted work in this repository must use only current-tree
-fixtures explicitly marked fully synthetic or inputs whose open license and AI
-disposition have been reviewed.
+ADR-0011 authorizes AI-assisted use of current NXP Monkey JSON/XML for the NXP
+Rust enablement program. Agents may fetch, inspect, compare, normalize, and use
+current KEX data to generate source locks, portable models, CMSIS-SVD, PAC
+metadata, Rust PAC output, and validation reports when the task is in scope.
 
-- Do not download, inspect, summarize, or expose live KEX responses, KEX cache
-  contents, or KEX-derived reports to an AI agent.
-- Do not run network-marked KEX tests in an AI-assisted session.
-- Do not use `git show`, patch-producing `git log`, unscoped historical diffs,
-  or equivalent commands to expose prior versions of `tests/fixtures/kex/**`,
-  `docs/research/xml_survey.md`, or other removed KEX-derived blobs to an AI
-  agent. Current-tree inspection of the fully synthetic fixtures is allowed.
-- Historical cleanup, release withdrawal, and review of old KEX artifacts are
-  human/repository-owner operations performed outside AI context. Use a
-  sanitized export without those blobs if an AI task needs older source state.
+- Record the exact NXP Monkey revision/version, requested part, upstream data
+  version, variants, acquisition command, and hashes of every consumed file.
+- Keep raw fetched payloads in the local cache or an explicitly designated
+  untracked workspace. Do not commit or redistribute raw payloads unless a
+  separate retained disposition permits that action.
+- Generated artifacts and reports must retain field-level provenance and must
+  distinguish source facts from adapter policy.
+- Network-marked KEX tests may run when needed for an authorized acquisition or
+  replay slice. Never expose credentials, tokens, customer data, or unrelated
+  cached parts.
+- Treat historical removed fixtures and surveys as unrelated legacy material;
+  inspect them only when a task explicitly requires historical analysis.
 
-These restrictions apply even when the data remains technically reachable in
-public Git history. ADR-0010 records the owner disposition.
+Source-lock schema v0 remains an immutable Git-only contract whose KEX value is
+`not-used`. New KEX acquisition identity belongs to a versioned successor
+contract; do not silently reinterpret existing v0 locks.
 
 ## Setup
 

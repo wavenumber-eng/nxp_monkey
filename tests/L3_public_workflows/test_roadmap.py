@@ -56,3 +56,12 @@ def test_build_roadmap_records_namespaces(tmp_path):
     uris = {entry["uri"] for entry in nxp_monkey.build_roadmap(part_root)["xml_namespaces"]}
     assert "http://swtools.freescale.net/XSD/processor/2.0" in uris
     assert "http://swtools.freescale.net/XSD/part_number/4.0" in uris
+
+
+def test_build_roadmap_recovers_part_from_cli_mirror_layout(tmp_path):
+    """The ``<PART>/xml/<variant>`` mirror must not report part ``xml``."""
+    part_root = _make_part_tree(tmp_path)
+    mirrored = tmp_path / "mirror" / "MCXA156" / "xml" / "ksdk2_0"
+    mirrored.parent.mkdir(parents=True)
+    part_root.rename(mirrored)
+    assert nxp_monkey.build_roadmap(mirrored)["part"] == "MCXA156"

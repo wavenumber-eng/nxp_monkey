@@ -23,6 +23,19 @@
 </section>
 
 <section>
+  <h2>Authorized KEX extension</h2>
+  <p>
+    ADR-0011 authorizes current NXP Monkey JSON/XML as AI-assisted input for
+    the NXP Rust enablement program. Source-lock v0 remains an immutable
+    Git-only contract with KEX marked <code>not-used</code>. A versioned
+    successor acquisition contract records the exact KEX upstream version,
+    variants, archive and file hashes, XML schema identities, JSON-mirror
+    algorithm, and offline replay inputs. Permission to process and generate
+    PAC/SVD artifacts does not by itself authorize committing raw payloads.
+  </p>
+</section>
+
+<section>
   <h2>Source-lock contract</h2>
   <p>A version-zero lock contains:</p>
   <ul>
@@ -145,7 +158,7 @@
     <li>Canonical UTF-8 JSON uses sorted keys, two-space indentation, LF, and a terminal newline.</li>
     <li>Two clean-cache resolutions and normalizations are byte-identical.</li>
     <li>Offline replay validates every locked commit and content hash.</li>
-    <li>Unknown, proprietary, or AI-restricted source state fails closed and is never supplied to the AI-assisted workflow or committed as a fixture.</li>
+    <li>Unknown or unauthorized source state fails closed. ADR-0011-authorized KEX data may enter the AI-assisted workflow, while raw-payload commits require a separate redistribution disposition.</li>
     <li>Schema changes are versioned and require explicit migration behavior.</li>
   </ul>
   <p>

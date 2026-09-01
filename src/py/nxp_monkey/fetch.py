@@ -28,6 +28,7 @@ def fetch(
     variant: str = DEFAULT_VARIANT,
     version: str | None = None,
     force: bool = False,
+    cache_dir: str | Path | None = None,
     client: KexClient | None = None,
     progress_callback: ProgressCallback | None = None,
 ) -> Path:
@@ -42,6 +43,8 @@ def fetch(
             newest version that publishes ``part`` (portfolio-latest).
         force: When True, refetch even if a populated cache directory
             already exists.
+        cache_dir: Optional cache root override. The KEX tree is stored under
+            ``<cache_dir>/kex``. ``None`` uses the platform cache contract.
         client: Optional :class:`KexClient` to reuse. A new client is
             constructed when omitted.
         progress_callback: Optional callable invoked as
@@ -65,7 +68,8 @@ def fetch(
         canonical_part = kex.canonicalize_family(part)
         resolved_version = kex.resolve_version_for_family(canonical_part)
 
-    output_root = cache.kex_root() / resolved_version
+    kex_cache = Path(cache_dir).resolve() / "kex" if cache_dir else cache.kex_root()
+    output_root = kex_cache / resolved_version
     target_tree = output_root / "processors" / canonical_part / variant
     if target_tree.exists() and not force and any(target_tree.iterdir()):
         return target_tree
@@ -100,6 +104,7 @@ def fetch_all(
     variant: str = DEFAULT_VARIANT,
     version: str | None = None,
     force: bool = False,
+    cache_dir: str | Path | None = None,
     client: KexClient | None = None,
     progress_factory: Callable[[str, str], ProgressCallback | None] | None = None,
 ) -> list[Path]:
@@ -114,6 +119,7 @@ def fetch_all(
             portfolio-latest per ADR-0007.
         force: When True, refetch even when a populated cache directory
             exists.
+        cache_dir: Optional cache root override forwarded to :func:`fetch`.
         client: Optional :class:`KexClient` to reuse.
         progress_factory: Optional callable invoked with ``(part, variant)``
             for every (part, variant) about to be fetched; the returned
@@ -140,6 +146,7 @@ def fetch_all(
                     variant=variant,
                     version=version,
                     force=force,
+                    cache_dir=cache_dir,
                     client=kex,
                     progress_callback=cb,
                 )

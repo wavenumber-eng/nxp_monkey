@@ -138,6 +138,13 @@ def _add_behavior_args(parser: argparse.ArgumentParser) -> None:
         help="Re-fetch even when the cached tree already exists",
     )
     behavior.add_argument(
+        "--cache",
+        metavar="DIR",
+        default=None,
+        type=Path,
+        help="Use DIR as the cache root instead of the platform cache directory",
+    )
+    behavior.add_argument(
         "--output",
         metavar="DIR",
         default=None,
@@ -229,7 +236,7 @@ def run(args: argparse.Namespace) -> int:
         write_json(target_dir / f"{part_name}.json", payload)
 
     # Full XML->JSON mirror (default): every <variant>/.../foo.xml becomes
-    # <PART>/json/<variant>/.../foo.json for authorized non-AI JSON tools.
+    # <PART>/json/<variant>/.../foo.json for authorized JSON tools.
     # Suppressible with
     # --no-json-mirror; narrowable via --json-mirror-only/skip globs.
     # Progress UI on stderr, one bar per (part, variant).
@@ -275,6 +282,7 @@ def _run_bulk(
             variant=variant,
             version=args.version,
             force=args.force,
+            cache_dir=args.cache,
             progress_factory=make_cb,
         )
         for cache_path in cache_paths:
@@ -307,6 +315,7 @@ def _run_parts(
                     variant=variant,
                     version=args.version,
                     force=args.force,
+                    cache_dir=args.cache,
                     client=client,
                     progress_callback=cb,
                 )
@@ -518,7 +527,7 @@ def _per_part_roadmaps(
     falls back to the first variant seen for that part. Each roadmap is
     decorated with a ``layout`` block describing the ``<PART>/`` folder
     split (``xml/`` raw binders vs ``json/`` parsed sidecars + mirror)
-    so an authorized non-AI tool reading just the JSON file understands the
+    so an authorized tool reading just the JSON file understands the
     surrounding on-disk layout. Returns a mapping ``part -> roadmap_dict``.
     """
     by_part: dict[str, list[dict]] = {}
@@ -572,7 +581,7 @@ def _part_folder_layout(
             "Namespace-stripped tags; attributes as '@name'; mixed text "
             "as '#text'; repeated children as lists; root '@_xmlns' "
             "preserves the source namespace declarations. Lossless for "
-            "authorized non-AI data processing."
+            "authorized data processing."
         )
     return {
         "part_folder": f"{part}/",

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wavenumber.dev/nxp-monkey/kex-acquisition-lock.schema.v1.json",
+  "title": "NXP Monkey KEX acquisition lock v1",
+  "type": "object",
+  "required": ["archives", "canonicalization", "json_mirror", "lock_id", "policy", "producer", "raw_files", "request", "schema_version", "schemas", "verification"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "lock_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "request": {
+      "type": "object",
+      "required": ["part", "upstream_version", "variants"],
+      "properties": {
+        "part": {"type": "string", "minLength": 1},
+        "upstream_version": {"type": "string", "minLength": 1},
+        "variants": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "producer": {
+      "type": "object",
+      "required": ["command", "name", "repository", "revision", "version"],
+      "properties": {"revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}},
+      "additionalProperties": true
+    },
+    "archives": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/file"}},
+    "raw_files": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/file"}},
+    "json_mirror": {"type": "object"},
+    "schemas": {"type": "array"},
+    "canonicalization": {"type": "string"},
+    "policy": {"type": "object"},
+    "verification": {"type": "object"}
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "required": ["path", "sha256", "size", "variant"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size": {"type": "integer", "minimum": 0},
+        "variant": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

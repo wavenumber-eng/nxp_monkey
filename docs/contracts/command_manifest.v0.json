@@ -62,6 +62,12 @@
       "summary": "Resolve and verify immutable official-source locks"
     },
     {
+      "config_contract": "docs/contracts/schemas/kex_acquisition_lock.schema.v1.json",
+      "design_doc": "docs/design/cli/kex-lock.html",
+      "name": "kex-lock",
+      "summary": "Create and offline-verify deterministic KEX acquisition locks"
+    },
+    {
       "config_contract": "docs/contracts/schemas/normalized_model.schema.v1.json",
       "design_doc": "docs/design/cli/model.html",
       "name": "model",

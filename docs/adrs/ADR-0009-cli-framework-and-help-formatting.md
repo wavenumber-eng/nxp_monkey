@@ -6,7 +6,7 @@ Date: 2026-05-29
 ## Context
 
 The CLI shape of `nxp_monkey` is part of its public surface. The CLI is
-consumed by humans and by authorized non-AI tools that walk `--help` output and
+consumed by humans and by authorized tools that walk `--help` output and
 the command manifest to plan invocations. Several CLI frameworks are
 available (argparse, click, typer); the choice affects both human ergonomics
 and machine introspection.

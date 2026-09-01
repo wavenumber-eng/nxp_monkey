@@ -26,10 +26,11 @@ and **JSON** (parsed spine + lossless XML->JSON mirror) output by default.
 `nxp_monkey` talks to NXP's public KEX storage API (the same one the
 MCUXpresso Config Tools Data Manager uses) and exposes the per-processor
 data tree — signal configurations, register variants, packages, clocks,
-resource tables — as a clean local cache for authorized human use and
-non-AI automation. The current Config Tools license prohibits using the
-licensed software as AI/model input; do not provide fetched KEX content or
-derived views to an AI system without written NXP permission.
+resource tables — as a clean local cache. ADR-0011 authorizes AI-assisted use
+of current JSON/XML data for the NXP Rust enablement program, including
+portable-model, CMSIS-SVD, PAC, and validation generation. Raw payload
+redistribution remains a separate disposition and is not implied by permission
+to process the data.
 
 ADR-0010 also defines a staged expansion for reproducible official
 MCUXpresso SDK manifest resolution, immutable source-lock verification, and a
@@ -95,7 +96,7 @@ nxp-monkey source verify --help
 
 ## What you get from `fetch MCXA156`
 
-Output is split by media type so an authorized non-AI tool can pick either side:
+Output is split by media type so an authorized tool can pick either side:
 
 ```
 MCXA156/
@@ -134,7 +135,7 @@ Skip the mirror with `--no-json-mirror`, or narrow it with
 `--json-mirror-only '**/registers/**'` (repeatable glob).
 
 The global `--json` flag switches stdout to print the JSON output path
-(for authorized non-AI tool integration); JSON files are always written by
+(for authorized tool integration); JSON files are always written by
 `fetch`.
 
 ## Library quick start

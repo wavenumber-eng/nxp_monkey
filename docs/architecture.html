@@ -10,8 +10,9 @@
     NXP Monkey is a library-first Python package and CLI for NXP MCUXpresso
     Config Tools KEX data. It discovers published tool versions and processor
     families, builds a local index, fetches part data trees, mirrors XML to
-    JSON, and exposes a stable local cache for authorized humans and non-AI
-    automation. KEX content is not an AI/model input absent written permission.
+    JSON, and exposes a stable local cache. ADR-0011 authorizes AI-assisted use
+    of current KEX JSON/XML for the NXP Rust enablement program. Acquisition and
+    processing permission does not by itself authorize raw-payload redistribution.
   </p>
 
   <h2>Layers</h2>
@@ -21,7 +22,7 @@
     <li><code>fetch.py</code>, <code>details.py</code>, <code>roadmap.py</code>, <code>xml_json.py</code>: data acquisition and parsing.</li>
     <li><code>index.py</code> and <code>search.py</code>: local SQLite/FTS index behavior.</li>
     <li><code>nxp_monkey_cmd_*.py</code>: thin CLI command wrappers.</li>
-    <li><code>source</code> layer (planned by ADR-0010): official MCUX manifest resolution, immutable source-lock verification, acquisition provenance, and a fail-closed KEX disposition.</li>
+    <li><code>source</code> layer (planned by ADR-0010 and extended by ADR-0011): official MCUX manifest resolution, immutable source-lock verification, KEX acquisition identity, and provenance.</li>
     <li><code>model</code> layer (planned by ADR-0010): layered portable silicon/package/board models and semantic conflict reports.</li>
     <li><code>docs/contracts/</code>: command, interface, and exception manifests.</li>
   </ul>

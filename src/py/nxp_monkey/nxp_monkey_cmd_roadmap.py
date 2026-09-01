@@ -2,7 +2,7 @@
 
 Thin wrapper around :func:`nxp_monkey.build_roadmap`. Fetches the part on
 demand when the cache is empty for the requested variant, then walks the
-unpacked tree and emits a roadmap dict pointing authorized non-AI tools at where things
+unpacked tree and emits a roadmap dict pointing authorized tools at where things
 live (key files, optional sections, package variants, codegen entry
 points, XML namespaces).
 """

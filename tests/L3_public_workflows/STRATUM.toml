@@ -84,3 +84,11 @@ name = "Models"
 description = "Validate public dataclass model behavior"
 concerns = ["api"]
 test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_010"
+file = "test_kex_lock.py"
+name = "KEX Acquisition Lock"
+description = "Create deterministic KEX locks and verify retained bytes offline"
+concerns = ["source-lock", "cache", "provenance"]
+test_case_type = "workflow"

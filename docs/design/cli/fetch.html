@@ -18,14 +18,14 @@
     parts into the local cache and mirror the result into a working
     directory tree split by media type. Positional inputs may be exact
     NXP portfolio keys, concrete orderable MPNs, or prefixes. This is the
-    primary data-acquisition entry point for authorized human users and
-    non-AI automation. Fetched KEX content must not be supplied to AI systems
-    without written NXP permission.
+    primary data-acquisition entry point for authorized users and automation.
+    ADR-0011 authorizes AI-assisted use for the NXP Rust enablement program;
+    other workflows must apply their own source policy.
   </p>
 
   <h2>Usage</h2>
   <pre><code>nxp-monkey fetch PART [PART ...] [--variant VARIANT] [--version VERSION]
-                  [--force] [--output DIR]
+                  [--force] [--cache DIR] [--output DIR]
                   [--no-json-mirror]
                   [--json-mirror-only PATTERN] [--json-mirror-skip PATTERN]
 nxp-monkey fetch --family PREFIX [...same flags...]
@@ -61,10 +61,11 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
 
   <h2>Output layout</h2>
   <p>
-    The platformdirs cache is always populated. In addition, each fetched
+    The platformdirs cache is populated unless <code>--cache DIR</code>
+    redirects the complete cache root for an isolated acquisition. In addition, each fetched
     part is mirrored into <code>DIR/&lt;PART&gt;/</code> under
     <code>--output</code> (cwd when absent), split by media type so an
-    authorized non-AI tool can consume either side without an XML parser:
+    authorized tool can consume either side without an XML parser:
   </p>
   <pre><code>DIR/&lt;PART&gt;/
   xml/                              # raw NXP binders, one subdir per SDK variant

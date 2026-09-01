@@ -16,6 +16,7 @@ from rich_argparse import RichHelpFormatter
 
 from ._version import __version__
 from .kex_client import NxpFetchError
+from .kex_lock import KexLockError
 from .model import ModelError
 from .source_lock import SourceLockError
 
@@ -70,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
             "this flag. `fetch` always writes per-part JSON sidecars + "
             "XML->JSON mirror regardless of this flag; --json on fetch "
             "additionally writes a top-level fetch.json invocation "
-            "summary. Use this for authorized non-AI tool integration."
+            "summary. Use this for authorized tool integration."
         ),
     )
 
@@ -114,6 +115,9 @@ def _register_commands(
         nxp_monkey_cmd_index as cmd_index,
     )
     from . import (
+        nxp_monkey_cmd_kex_lock as cmd_kex_lock,
+    )
+    from . import (
         nxp_monkey_cmd_model as cmd_model,
     )
     from . import (
@@ -143,6 +147,7 @@ def _register_commands(
         cmd_roadmap,
         cmd_cache,
         cmd_source,
+        cmd_kex_lock,
         cmd_model,
     ):
         module.register(subparsers)
@@ -179,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return int(func(args) or 0)
-    except (ModelError, NxpFetchError, SourceLockError) as exc:
+    except (KexLockError, ModelError, NxpFetchError, SourceLockError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

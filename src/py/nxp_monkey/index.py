@@ -162,7 +162,7 @@ def build_index(
                 ("source_version", meta.source_version),
             )
 
-        # Sidecar JSON for authorized human / non-AI tool inspection.
+        # Sidecar JSON for authorized human and tool inspection.
         sidecar = cache.index_root() / META_FILENAME
         sidecar.write_text(
             json.dumps(

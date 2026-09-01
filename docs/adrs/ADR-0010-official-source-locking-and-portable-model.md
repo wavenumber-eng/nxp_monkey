@@ -3,6 +3,11 @@
 Status: accepted
 Date: 2026-08-16
 
+Amended: 2026-09-01 by ADR-0011. The v0 Git-only lock and its
+`kex.status = not-used` records remain immutable. ADR-0011 supersedes this
+ADR's program-wide AI prohibition for new work and authorizes a separate,
+versioned KEX acquisition/model path for MCXA156 PAC and SVD generation.
+
 ## Context
 
 The MCXA156 PAC and FRDM-MCXA156 Embassy increment needs reproducible facts
@@ -75,7 +80,8 @@ nxp-monkey model compare `
 ```
 
 `--manifest-revision` accepts only an exact commit. `--kex-policy not-used` is
-the only permitted v0 value in this AI-assisted program. Recorded command
+the only value represented by source-lock schema v0; ADR-0011 uses a separate
+successor acquisition contract rather than reinterpreting this schema. Recorded command
 templates represent operational paths only with the literal tokens `${CACHE}`,
 `${PROFILE}`, `${LOCK}`, and `${OUTPUT}`; host paths never enter canonical content. Resolve writes
 only the requested lock; verify emits no modified lock. `--offline` forbids all
@@ -151,8 +157,9 @@ scope specific:
 - CMSIS headers and startup/linker material are primary for derivative
   interrupt and memory integration facts;
 - licensed SVD/register descriptions are primary for register shape;
-- when a future policy explicitly permits KEX, exact-package data may be a
-  signal-mux/package corroboration source; KEX is not a v0 input;
+- under ADR-0011, exact-package KEX data is an authorized primary candidate for
+  register, interrupt, DMA, clock, pin-mux, and package facts in new work; KEX
+  remains absent from historical v0 source locks;
 - open-licensed board BSP records and retained hardware observations are
   primary for v0 board wiring; account-gated schematic/design content is not a
   v0 input without separate permission; and
@@ -181,17 +188,16 @@ default for a missing or ambiguous disposition is deny.
   carry an open-source grant for this workflow and are excluded from v0. Their
   absence is represented explicitly: per-package bond-out is unavailable, and
   BSP-derived board wiring requires later hardware confirmation.
-- The current MCUXpresso Config Tools license prohibits use of the licensed
-  software as data or training input to AI models and restricts publication of
-  reports associated with its use. Consequently KEX/Config Tools payloads are
-  excluded from the AI-assisted MCXA156 pipeline. The lock records KEX as
-  `not-used` with the governing license evidence. No KEX archive, raw file,
-  parsed value, normalized derivative, or report is exposed to an AI model or
-  committed by this workflow. Written NXP authorization and a new reviewed
-  policy revision are required to change that disposition.
+- Historical v0 work interpreted the Config Tools agreement conservatively and
+  recorded KEX as `not-used`. ADR-0011 records the repository owner's corrected
+  program direction: current NXP Monkey JSON/XML may be acquired, cached,
+  inspected by AI-assisted tooling, normalized, and used to generate PAC, SVD,
+  and validation artifacts. This permission does not automatically authorize
+  committing or redistributing raw payloads. New locks record exact KEX
+  versions and content hashes; historical v0 locks remain unchanged.
 - Unknown, proprietary, conflicting, or AI-restricted material cannot become a
   committed fixture. Cache-only handling is permitted only when the governing
-  license allows the intended non-AI operation.
+  license allows the intended operation.
 
 The repository previously labeled three XML test files as captured KEX
 payloads and shipped them in source distributions, and retained a KEX-derived
@@ -202,17 +208,12 @@ Published Git history remains an administrative/legal-owner remediation item;
 this ADR does not authorize rewriting shared history or make a licensing claim
 about prior releases.
 
-Repository-owner disposition for this ADR: do not rewrite published Git refs or
-withdraw prior releases in the source-contract slice, because either action is
-destructive for existing consumers and requires separately scoped human/legal
-review. The owner explicitly accepts the residual administrative risk that old
-blobs remain publicly reachable while denying that they are permissible AI
-inputs. `AGENTS.md` therefore forbids AI agents from inspecting live/cache KEX
-content, network KEX tests, the removed survey, and historical versions or
-diffs of the former KEX fixtures; an AI task that needs historical source must
-use a sanitized export. This is a risk-control disposition, not a conclusion
-that prior redistribution was licensed. A future human owner may still choose
-a coordinated history rewrite or release withdrawal.
+Repository-owner disposition for the historical blobs remains unchanged: do
+not rewrite published Git refs or withdraw prior releases without a separately
+scoped decision. ADR-0011 removes the blanket agent prohibition for current,
+authorized KEX acquisitions. Historical removed fixtures remain legacy
+material rather than a preferred source and are inspected only when a task
+explicitly requires historical analysis.
 
 This is an engineering retention policy, not a conclusion that a broad NXP
 license applies. Every actual source lock carries the reviewed policy revision
@@ -222,8 +223,8 @@ and the file-level license evidence used for that resolution.
 
 - NXP Monkey gains explicit source-resolution and portable-model APIs without
   becoming a PAC generator.
-- west is an optional source-resolution tool dependency, isolated from current
-  authorized non-AI KEX-only workflows.
+- west is an optional source-resolution tool dependency, isolated from KEX-only
+  workflows.
 - The coordination repository is the retention boundary for accepted locks,
   generation manifests, compatibility reports, and hardware evidence.
 - Existing `fetch`, `details`, index, and cache behavior remains compatible.

@@ -4,7 +4,7 @@ These readers cover the small high-value files that describe the
 structure of a part — top-level processor header, per-variant manifest,
 core list, and the ``processor.properties`` key=value file. The heavier
 payloads (registers, signal configuration, clocks) are deliberately not
-covered here; authorized non-AI tools reach those via the :class:`~nxp_monkey.PartDetails`
+covered here; authorized tools reach those via the :class:`~nxp_monkey.PartDetails`
 ``root`` path and per-variant ``db_links``.
 
 Every reader takes a single :class:`pathlib.Path` and returns either a

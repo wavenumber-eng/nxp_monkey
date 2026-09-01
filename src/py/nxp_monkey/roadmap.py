@@ -1,7 +1,7 @@
 """Per-part roadmap + inferred schema builder.
 
 Walks an unpacked ``processors/<PART>/<VARIANT>/`` cache tree and emits a
-structured guide an authorized human or non-AI tool can read to locate things
+structured guide an authorized human or tool can read to locate things
 without scanning the whole directory. The output is generated from the actual
 authorized on-disk tree so it reflects the part at hand.
 
@@ -51,7 +51,8 @@ def build_roadmap(part_root: Path) -> dict:
         A JSON-friendly dict. Safe to write directly with
         :func:`nxp_monkey.serialization.write_json`.
     """
-    part = part_root.parent.name
+    # Cache trees are <PART>/<VARIANT>; CLI mirrors are <PART>/xml/<VARIANT>.
+    part = part_root.parent.parent.name if part_root.parent.name == "xml" else part_root.parent.name
     variant = part_root.name
 
     key_files = _collect_key_files(part_root, part)
@@ -209,7 +210,7 @@ def _build_guide(
     codegen: dict[str, object],
     package_variants: list[dict],
 ) -> list[str]:
-    """Build a short ordered list of steps for an authorized non-AI reader."""
+    """Build a short ordered list of steps for an authorized reader."""
     steps = [
         f"This directory holds the {variant} binder for {part}. Same silicon "
         "as the other variants under the same processors/<PART>/ folder.",
