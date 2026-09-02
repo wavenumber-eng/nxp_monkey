@@ -123,6 +123,13 @@ def normalize_kex_model(
     return model
 
 
+def verify_kex_model(*, model: str | Path) -> ModelRecord:
+    """Authenticate and semantically validate a normalized-model v2 file."""
+    payload = _load_json(model)
+    _validate_kex_model(payload)
+    return payload
+
+
 def _build_kex_model(lock: ModelRecord, inputs: _KexInputs, generator_revision: str) -> ModelRecord:
     if "ksdk2_0" not in inputs.variants:
         raise KexModelError("normalized-model v2 requires the locked ksdk2_0 binder")

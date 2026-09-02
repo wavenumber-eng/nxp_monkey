@@ -21,7 +21,7 @@ from .kex_client import (
     portfolio_latest_map,
 )
 from .kex_lock import KexLockError, create_kex_acquisition_lock, verify_kex_acquisition_lock
-from .kex_model import KexModelError, normalize_kex_model
+from .kex_model import KexModelError, normalize_kex_model, verify_kex_model
 from .model import ModelError, compare_models, normalize_model, validate_model_semantics
 from .models import (
     ApiVersion,
@@ -86,6 +86,7 @@ __all__ = [
     "search",
     "verify_source_lock",
     "verify_kex_acquisition_lock",
+    "verify_kex_model",
     "validate_model_semantics",
     "xml_file_to_dict",
 ]

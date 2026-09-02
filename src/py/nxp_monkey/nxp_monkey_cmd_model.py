@@ -38,6 +38,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     normalize_kex.add_argument("--output", required=True)
     normalize_kex.set_defaults(func=run_normalize_kex)
 
+    verify_kex = actions.add_parser(
+        "verify-kex", help="Authenticate and semantically validate model-v2 JSON"
+    )
+    verify_kex.add_argument("--model", required=True)
+    verify_kex.set_defaults(func=run_verify_kex)
+
     compare = actions.add_parser("compare", help="Compare model or adapter JSON")
     compare.add_argument("--left", required=True)
     compare.add_argument("--right", required=True)
@@ -76,4 +82,13 @@ def run_normalize_kex(args: argparse.Namespace) -> int:
         generator_revision=args.generator_revision,
     )
     print(str(Path(args.output).resolve()) if args.json else model["model_id"])
+    return 0
+
+
+def run_verify_kex(args: argparse.Namespace) -> int:
+    """Execute ``nxp-monkey model verify-kex``."""
+    from .kex_model import verify_kex_model
+
+    model = verify_kex_model(model=args.model)
+    print(str(Path(args.model).resolve()) if args.json else model["model_id"])
     return 0

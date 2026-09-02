@@ -17,6 +17,7 @@ from rich_argparse import RichHelpFormatter
 from ._version import __version__
 from .kex_client import NxpFetchError
 from .kex_lock import KexLockError
+from .kex_model import KexModelError
 from .model import ModelError
 from .source_lock import SourceLockError
 
@@ -184,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return int(func(args) or 0)
-    except (KexLockError, ModelError, NxpFetchError, SourceLockError) as exc:
+    except (KexLockError, KexModelError, ModelError, NxpFetchError, SourceLockError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

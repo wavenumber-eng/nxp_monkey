@@ -251,6 +251,13 @@ def test_kex_model_v2_normalizes_complete_synthetic_graph(tmp_path):
         generator_revision="b" * 40,
     )
     assert first.read_bytes() == second.read_bytes()
+    assert nxp_monkey.verify_kex_model(model=first)["model_id"] == model["model_id"]
+    tampered = deepcopy(model)
+    tampered["device"]["family"] = "tampered"
+    stale = tmp_path / "stale-model-id.json"
+    stale.write_bytes(canonical_json_bytes(tampered))
+    with pytest.raises(nxp_monkey.KexModelError, match="identity mismatch"):
+        nxp_monkey.verify_kex_model(model=stale)
     assert model["schema_version"] == "2"
     assert model["device"]["id"] == "MCUTEST"
     assert [item["name"] for item in model["peripherals"][0]["registers"]] == [
