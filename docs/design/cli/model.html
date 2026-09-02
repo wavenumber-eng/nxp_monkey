@@ -9,6 +9,16 @@
     canonical portable model. <code>--offline</code> is mandatory.
   </p>
   <p>
+    <code>model normalize-kex</code> verifies a KEX acquisition lock offline and
+    writes normalized-model v2. It consumes the locked KEX XML as hardware
+    authority, expands register templates, catalogs package pin routes without
+    duplication, preserves package-specific declarations and clock/resource
+    documents, and records compact source-level provenance for every fact
+    subtree. <code>--accepted-lock-id</code> must exactly match the verified
+    lock and <code>--generator-revision</code> must be a full 40-hex commit;
+    both values are embedded in the artifact contract.
+  </p>
+  <p>
     <code>model compare</code> compares portable model JSON, supported nxp-pac
     adapter metadata, or a generated nxp-pac Rust module and writes stable
     findings plus category coverage.

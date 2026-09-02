@@ -129,6 +129,36 @@
 </section>
 
 <section>
+  <h2>KEX portable model v2</h2>
+  <p>
+    Model v2 is a new contract and does not reinterpret model v1. It consumes
+    only an offline-verified KEX acquisition-lock v1, uses raw XML as hardware
+    authority, and treats the deterministic JSON files as verified projections.
+    The normalizer expands register templates and instances, computes register
+    reset values and masks from their fields, retains interrupts and DMA
+    relationships, and catalogs all package pin routes and programming actions.
+  </p>
+  <p>
+    Repeated pin-route graphs are content-addressed by semantic content and
+    shared by package pin records; source locators do not affect route identity.
+    Package-specific pin declarations and every package copy of supplementary
+    resource XML are retained as normalized element graphs until dedicated
+    adapters own every concept. Every fact leaf is covered by a source-locator
+    subtree record with a source-value fingerprint; the validator rejects an
+    unknown source, duplicate pointer, missing coverage, invalid range,
+    dangling reference, or changed model ID. CMSIS-SVD-only concepts are not
+    classified until the downstream reconstructability analysis proves them.
+  </p>
+  <p>
+    When both KSDK and Zephyr binders are locked, their common file identities
+    are recorded and pin programming routes must compare exactly. Binder-only
+    identifiers remain classified metadata rather than silently overriding a
+    hardware route. NXP Config Tools binary model classes may be inspected to
+    confirm vendor parser semantics, but do not supply MCXA156 hardware facts.
+  </p>
+</section>
+
+<section>
   <h2>Conflicts and overrides</h2>
   <p>
     Normalization compares sources by field class and exact scope. Conflicts
@@ -209,9 +239,14 @@
     AI input. KEX <code>not-used</code> records contain no payload identity.
     All overrides match exactly once, all carried output pointers exist, and
     required semantic and completeness reports cover every emitted output.
-    The model's required <code>fact_provenance</code> index maps every carried
-    leaf JSON Pointer to one or more provenance records; validation rejects a
-    missing pointer, a dangling provenance reference, or an uncovered leaf.
+    Pre-v2 models' required <code>fact_provenance</code> index maps every
+    carried leaf JSON Pointer to one or more provenance records. Under ADR-0011, model
+    v2 may instead use <code>coverage: subtree</code>: every leaf must have an
+    ancestor provenance pointer, the nearest ancestor defines the leaf's exact
+    source set, and a more-specific record overrides inheritance for that
+    subtree. Every v2 source entry has a resolvable locked-source locator and
+    source-value fingerprint. Validation rejects duplicate pointers, dangling
+    sources, invalid locators or fingerprints, and uncovered leaves.
   </p>
 </section>
 

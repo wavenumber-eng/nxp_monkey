@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wavenumber.dev/nxp-monkey/normalized-model.schema.v2.json",
+  "title": "NXP Monkey KEX normalized model v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "canonicalization", "clock_documents", "clock_gates", "device",
+    "dma_requests", "fact_provenance", "generator", "input_files",
+    "interrupts", "model_id", "package_commonality", "packages", "peripherals",
+    "pin_model_declarations", "pin_routes", "programming_sequences",
+    "provenance", "resource_documents", "schema_version", "source_absent",
+    "source_documents", "source_lock_id", "variant_comparison"
+  ],
+  "properties": {
+    "canonicalization": { "const": "json-sort-keys-indent-2-lf-final-newline-v1" },
+    "clock_documents": { "type": "array", "items": { "$ref": "#/$defs/document" } },
+    "clock_gates": { "type": "array", "items": { "$ref": "#/$defs/clockGate" } },
+    "device": { "$ref": "#/$defs/device" },
+    "dma_requests": { "type": "array", "items": { "$ref": "#/$defs/dmaRequest" } },
+    "fact_provenance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/factProvenance" } },
+    "generator": { "$ref": "#/$defs/generator" },
+    "input_files": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/inputFile" } },
+    "interrupts": { "$ref": "#/$defs/interrupts" },
+    "model_id": { "$ref": "#/$defs/sha256Id" },
+    "package_commonality": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/packageCommonality" } },
+    "packages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/package" } },
+    "peripherals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/peripheral" } },
+    "pin_model_declarations": { "type": "array", "items": { "$ref": "#/$defs/pinModelDeclarationSet" } },
+    "pin_routes": { "type": "array", "items": { "$ref": "#/$defs/pinRouteCatalog" } },
+    "programming_sequences": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/programmingSequence" } },
+    "provenance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provenance" } },
+    "resource_documents": { "type": "array", "items": { "$ref": "#/$defs/document" } },
+    "schema_version": { "const": "2" },
+    "source_absent": { "type": "array", "maxItems": 0 },
+    "source_documents": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/sourceDocument" } },
+    "source_lock_id": { "$ref": "#/$defs/sha256Id" },
+    "variant_comparison": { "type": "array", "items": { "$ref": "#/$defs/variantComparison" } }
+  },
+  "$defs": {
+    "alias": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": { "type": { "type": "string" }, "value": { "type": "string" } }
+    },
+    "clockGate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["control", "name", "peripherals", "states"],
+      "properties": {
+        "control": {
+          "type": "object", "additionalProperties": false,
+          "required": ["bit_field", "peripheral", "register"],
+          "properties": {
+            "bit_field": { "type": "string", "minLength": 1 },
+            "peripheral": { "type": "string", "minLength": 1 },
+            "register": { "type": "string", "minLength": 1 }
+          }
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "peripherals": { "type": "array", "items": { "$ref": "#/$defs/gatePeripheral" } },
+        "states": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/state" } }
+      }
+    },
+    "core": {
+      "type": "object", "additionalProperties": false,
+      "required": ["description", "id", "name"],
+      "properties": {
+        "description": { "type": "string" }, "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "device": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cores", "default_part", "endian", "family", "id", "producer", "series"],
+      "properties": {
+        "cores": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/core" } },
+        "default_part": { "type": "string", "minLength": 1 }, "endian": { "enum": ["little", "big"] },
+        "family": { "type": "string", "minLength": 1 }, "id": { "type": "string", "minLength": 1 },
+        "producer": { "type": "string", "minLength": 1 }, "series": { "type": "string", "minLength": 1 }
+      }
+    },
+    "dmaDevice": {
+      "type": "object", "additionalProperties": false, "required": ["device", "function"],
+      "properties": {
+        "channel": { "type": "string" }, "device": { "type": "string", "minLength": 1 },
+        "function": { "type": "string", "minLength": 1 }
+      }
+    },
+    "dmaRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["controller", "devices", "disabled", "id", "label", "number"],
+      "properties": {
+        "controller": { "type": "string", "minLength": 1 },
+        "devices": { "type": "array", "items": { "$ref": "#/$defs/dmaDevice" } },
+        "disabled": { "type": "boolean" }, "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" }, "number": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "document": {
+      "type": "object", "additionalProperties": false, "required": ["path", "root", "source_ref"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 }, "root": { "$ref": "#/$defs/xmlNode" },
+        "source_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "enumValue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["description", "name", "numeric_value", "value"],
+      "properties": {
+        "description": { "type": "string" }, "name": { "type": "string", "minLength": 1 },
+        "numeric_value": { "type": ["integer", "null"], "minimum": 0 },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    },
+    "factProvenance": {
+      "type": "object", "additionalProperties": false, "required": ["coverage", "pointer", "sources"],
+      "properties": {
+        "coverage": { "const": "subtree" },
+        "pointer": { "type": "string", "pattern": "^/" },
+        "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/sourceReference" } }
+      }
+    },
+    "field": {
+      "type": "object", "additionalProperties": false,
+      "required": ["access", "aliases", "description", "item_width", "name", "offset", "reserved", "reset_mask", "reset_value", "values", "width"],
+      "properties": {
+        "access": { "type": ["string", "null"] }, "aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } },
+        "description": { "type": "string" }, "item_width": { "type": ["integer", "null"], "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 }, "offset": { "type": "integer", "minimum": 0 },
+        "reserved": { "type": "boolean" }, "reset_mask": { "type": ["integer", "null"], "minimum": 0 },
+        "reset_value": { "type": ["integer", "null"], "minimum": 0 },
+        "values": { "type": "array", "items": { "$ref": "#/$defs/enumValue" } },
+        "width": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "gatePeripheral": {
+      "type": "object", "additionalProperties": false, "required": ["device"],
+      "properties": {
+        "device": { "type": "string", "minLength": 1 }, "submodule_index": { "type": "string" },
+        "submodule_name": { "type": "string" }
+      }
+    },
+    "generator": {
+      "type": "object", "additionalProperties": false,
+      "required": ["command", "name", "revision", "schema_sha256", "version"],
+      "properties": {
+        "command": { "type": "string", "minLength": 1 }, "name": { "const": "nxp-monkey" },
+        "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "schema_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "inputFile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["disposition", "path", "reason", "source_ref", "variant"],
+      "properties": {
+        "disposition": { "enum": ["modeled-source-document", "typed-projection-or-locked-duplicate", "binder-metadata", "auxiliary-not-executed", "auxiliary-visualization", "compared-metadata"] },
+        "path": { "type": "string", "minLength": 1 }, "reason": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "variant": { "type": "string", "minLength": 1 }
+      }
+    },
+    "interruptDevice": {
+      "type": "object", "additionalProperties": false, "required": ["id"],
+      "properties": { "channel": { "type": "string" }, "function": { "type": "string" }, "id": { "type": "string", "minLength": 1 } }
+    },
+    "interrupts": {
+      "type": "object", "additionalProperties": false, "required": ["priority_bits", "vectors"],
+      "properties": {
+        "priority_bits": { "type": ["integer", "null"], "minimum": 1 },
+        "vectors": { "type": "array", "items": { "$ref": "#/$defs/interruptVector" } }
+      }
+    },
+    "interruptVector": {
+      "type": "object", "additionalProperties": false, "required": ["devices", "handler", "name", "number"],
+      "properties": {
+        "devices": { "type": "array", "items": { "$ref": "#/$defs/interruptDevice" } },
+        "handler": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 },
+        "number": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "package": {
+      "type": "object", "additionalProperties": false,
+      "required": ["declared_physical_count", "geometry", "modeled_pin_records", "package", "pin_categories", "pins", "signal_part_information", "sku", "unlisted_position_count"],
+      "properties": {
+        "declared_physical_count": { "type": "integer", "minimum": 1 },
+        "geometry": {
+          "type": "object", "additionalProperties": false, "required": ["layout", "look"],
+          "properties": { "layout": { "$ref": "#/$defs/stringMap" }, "look": { "$ref": "#/$defs/stringMap" } }
+        },
+        "modeled_pin_records": { "type": "integer", "minimum": 0 }, "package": { "type": "string", "minLength": 1 },
+        "pin_categories": {
+          "type": "object", "additionalProperties": false, "required": ["gpio_pad", "other", "power"],
+          "properties": { "gpio_pad": { "type": "integer", "minimum": 0 }, "other": { "type": "integer", "minimum": 0 }, "power": { "type": "integer", "minimum": 0 } }
+        },
+        "pins": { "type": "array", "items": { "$ref": "#/$defs/pin" } },
+        "signal_part_information": { "$ref": "#/$defs/xmlNode" },
+        "sku": { "type": "string", "minLength": 1 }, "unlisted_position_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "packageCommonality": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "name", "package_sources", "semantic_sha256"],
+      "properties": {
+        "kind": { "enum": ["register-index", "register-definition", "resource-table"] },
+        "name": { "type": "string", "minLength": 1 },
+        "package_sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/packageSource" } },
+        "semantic_sha256": { "$ref": "#/$defs/sha256Id" }
+      }
+    },
+    "packageSource": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sku", "source_ref"],
+      "properties": {
+        "sku": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "peripheral": {
+      "type": "object", "additionalProperties": false,
+      "required": ["aliases", "base_address", "definition_file", "full_name", "name", "registers", "size"],
+      "properties": {
+        "aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } },
+        "base_address": { "type": "integer", "minimum": 0 }, "definition_file": { "type": "string", "minLength": 1 },
+        "full_name": { "type": "string" }, "name": { "type": "string", "minLength": 1 },
+        "registers": { "type": "array", "items": { "$ref": "#/$defs/register" } },
+        "size": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "pin": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attributes", "category", "description", "functional_properties", "label", "name", "position", "power_pin", "route_catalog_id"],
+      "properties": {
+        "attributes": { "$ref": "#/$defs/stringMap" }, "category": { "enum": ["gpio_pad", "other", "power"] },
+        "description": { "type": "string" }, "functional_properties": { "oneOf": [{ "$ref": "#/$defs/xmlNode" }, { "type": "null" }] },
+        "label": { "type": ["string", "null"] }, "name": { "type": "string", "minLength": 1 },
+        "position": { "type": "string", "minLength": 1 }, "power_pin": { "type": "boolean" },
+        "route_catalog_id": { "type": "string", "pattern": "^pin-routes:[0-9a-f]{24}$" }
+      }
+    },
+    "pinModelDeclarationSet": {
+      "type": "object", "additionalProperties": false,
+      "required": ["declarations", "sku"],
+      "properties": {
+        "declarations": { "type": "array", "items": { "$ref": "#/$defs/xmlNode" } },
+        "sku": { "type": "string", "minLength": 1 }
+      }
+    },
+    "pinReference": {
+      "type": "object", "required": ["kind"], "properties": { "kind": { "type": "string", "pattern": "_ref$" } },
+      "additionalProperties": { "type": "string" }
+    },
+    "pinRoute": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attributes", "configurations", "default", "exclusive", "group_attributes", "mux", "name", "package_function", "references"],
+      "properties": {
+        "attributes": { "$ref": "#/$defs/stringMap" },
+        "configurations": { "type": "array", "items": { "$ref": "#/$defs/xmlNode" } },
+        "default": { "type": "boolean", "default": false }, "exclusive": { "type": "boolean", "default": true },
+        "group_attributes": { "$ref": "#/$defs/stringMap" }, "mux": { "type": ["integer", "null"], "minimum": 0 },
+        "name": { "type": "string" }, "package_function": { "type": "string" },
+        "references": { "type": "array", "items": { "$ref": "#/$defs/pinReference" } }
+      }
+    },
+    "pinRouteCatalog": {
+      "type": "object", "additionalProperties": false, "required": ["id", "pin_name", "routes"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^pin-routes:[0-9a-f]{24}$" },
+        "pin_name": { "type": "string", "minLength": 1 }, "routes": { "type": "array", "items": { "$ref": "#/$defs/pinRoute" } }
+      }
+    },
+    "programmingSequence": {
+      "type": "object", "additionalProperties": false, "required": ["sku", "steps"],
+      "properties": { "sku": { "type": "string", "minLength": 1 }, "steps": { "type": "array", "items": { "$ref": "#/$defs/programmingStep" } } }
+    },
+    "programmingStep": {
+      "type": "object", "additionalProperties": false, "required": ["id", "peripheral"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "peripheral": { "type": "string", "minLength": 1 } }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false, "required": ["id", "path", "sha256", "variant"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "variant": { "type": "string", "minLength": 1 }
+      }
+    },
+    "register": {
+      "type": "object", "additionalProperties": false,
+      "required": ["aliases", "description", "fields", "name", "offset", "reset_mask", "reset_value", "width"],
+      "properties": {
+        "aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } }, "description": { "type": "string" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } }, "name": { "type": "string", "minLength": 1 },
+        "offset": { "type": "integer", "minimum": 0 }, "reset_mask": { "type": ["integer", "null"], "minimum": 0 },
+        "reset_value": { "type": ["integer", "null"], "minimum": 0 }, "template": { "$ref": "#/$defs/template" },
+        "width": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "sha256Id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "sourceDocument": {
+      "type": "object", "additionalProperties": false, "required": ["path", "root", "source_ref", "variant"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 }, "root": { "$ref": "#/$defs/xmlNode" },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "variant": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sourceReference": {
+      "type": "object", "additionalProperties": false, "required": ["locator", "ref", "value_sha256"],
+      "properties": {
+        "locator": { "type": "string", "pattern": "^/" }, "ref": { "type": "string", "minLength": 1 },
+        "value_sha256": { "$ref": "#/$defs/sha256Id" }
+      }
+    },
+    "state": {
+      "type": "object", "additionalProperties": false, "required": ["name", "value"],
+      "properties": { "name": { "enum": ["disabled", "enabled"] }, "value": { "type": "string", "minLength": 1 } }
+    },
+    "stringMap": { "type": "object", "additionalProperties": { "type": "string" } },
+    "template": {
+      "type": "object", "additionalProperties": false, "required": ["rid", "values"],
+      "properties": { "rid": { "type": "string", "minLength": 1 }, "values": { "type": "array", "items": { "type": "string" } } }
+    },
+    "variantComparison": {
+      "type": "object", "additionalProperties": false,
+      "required": ["classification", "disposition", "evidence", "ksdk_sha256", "path", "same_bytes", "selected_variant", "semantic_status", "source_refs", "source_values", "zephyr_sha256"],
+      "properties": {
+        "classification": { "type": "string", "minLength": 1 }, "disposition": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "ksdk_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "path": { "type": "string", "minLength": 1 },
+        "same_bytes": { "type": "boolean" }, "selected_variant": { "enum": ["ksdk2_0"] },
+        "semantic_status": { "type": "string", "minLength": 1 },
+        "source_refs": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "string", "minLength": 1 } },
+        "source_values": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "array", "items": { "$ref": "#/$defs/xmlDifference" } }
+          ]
+        },
+        "zephyr_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "xmlNode": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attributes", "children", "locator", "name", "namespace", "text"],
+      "properties": {
+        "attributes": { "$ref": "#/$defs/stringMap" }, "children": { "type": "array", "items": { "$ref": "#/$defs/xmlNode" } },
+        "locator": { "type": "string", "pattern": "^/" }, "name": { "type": "string", "minLength": 1 },
+        "namespace": { "type": "string" }, "text": { "type": ["string", "null"] }
+      }
+    },
+    "xmlDifference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ksdk2_0", "pointer", "zephyr3_2"],
+      "properties": {
+        "ksdk2_0": { "type": ["string", "null"] },
+        "pointer": { "type": "string", "pattern": "^/" },
+        "zephyr3_2": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

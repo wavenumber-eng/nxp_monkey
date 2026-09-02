@@ -29,6 +29,7 @@ Thumbs.db
 
 # Local data
 /scratch/
+/MCXA156/
 
 # CLI --json output that lands in cwd during dev
 /fetch.json

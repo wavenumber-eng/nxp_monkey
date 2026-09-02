@@ -4,6 +4,7 @@ Importing ``nxp_monkey`` exposes the stable library API documented under
 ``docs/design/api/``. The CLI in :mod:`nxp_monkey._cli` is a thin wrapper
 around these symbols; see ADR-0002 for the library-first design rule.
 """
+
 from __future__ import annotations
 
 from ._version import __version__
@@ -20,6 +21,7 @@ from .kex_client import (
     portfolio_latest_map,
 )
 from .kex_lock import KexLockError, create_kex_acquisition_lock, verify_kex_acquisition_lock
+from .kex_model import KexModelError, normalize_kex_model
 from .model import ModelError, compare_models, normalize_model, validate_model_semantics
 from .models import (
     ApiVersion,
@@ -48,6 +50,7 @@ __all__ = [
     "IndexMeta",
     "KexClient",
     "KexLockError",
+    "KexModelError",
     "NxpFetchError",
     "ModelError",
     "PackageVariant",
@@ -75,6 +78,7 @@ __all__ = [
     "list_versions",
     "mirror_xml_tree_as_json",
     "normalize_model",
+    "normalize_kex_model",
     "open_index",
     "part_variants",
     "portfolio_latest_map",

@@ -68,10 +68,10 @@
       "summary": "Create and offline-verify deterministic KEX acquisition locks"
     },
     {
-      "config_contract": "docs/contracts/schemas/normalized_model.schema.v1.json",
+      "config_contract": "docs/contracts/schemas/normalized_model.schema.v2.json",
       "design_doc": "docs/design/cli/model.html",
       "name": "model",
-      "summary": "Normalize and compare portable official-source models"
+      "summary": "Normalize KEX or official-source locks and compare portable models"
     },
     {
       "config_contract": "none",

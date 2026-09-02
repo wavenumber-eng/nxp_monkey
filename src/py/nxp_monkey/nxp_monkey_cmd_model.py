@@ -7,6 +7,7 @@ from pathlib import Path
 
 from rich_argparse import RichHelpFormatter
 
+from .kex_model import normalize_kex_model
 from .model import compare_models, normalize_model
 
 
@@ -25,6 +26,17 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     normalize.add_argument("--offline", action="store_true", required=True)
     normalize.add_argument("--output", required=True)
     normalize.set_defaults(func=run_normalize)
+
+    normalize_kex = actions.add_parser(
+        "normalize-kex", help="Normalize a verified KEX acquisition lock"
+    )
+    normalize_kex.add_argument("--lock", required=True)
+    normalize_kex.add_argument("--accepted-lock-id", required=True)
+    normalize_kex.add_argument("--cache", required=True)
+    normalize_kex.add_argument("--generator-revision", required=True)
+    normalize_kex.add_argument("--offline", action="store_true", required=True)
+    normalize_kex.add_argument("--output", required=True)
+    normalize_kex.set_defaults(func=run_normalize_kex)
 
     compare = actions.add_parser("compare", help="Compare model or adapter JSON")
     compare.add_argument("--left", required=True)
@@ -51,3 +63,17 @@ def run_compare(args: argparse.Namespace) -> int:
         else f"{report['summary']['total_differences']} differences"
     )
     return 2 if report["summary"]["unclassified"] else 0
+
+
+def run_normalize_kex(args: argparse.Namespace) -> int:
+    """Execute ``nxp-monkey model normalize-kex``."""
+    model = normalize_kex_model(
+        lock=args.lock,
+        cache_dir=args.cache,
+        output=args.output,
+        offline=args.offline,
+        accepted_lock_id=args.accepted_lock_id,
+        generator_revision=args.generator_revision,
+    )
+    print(str(Path(args.output).resolve()) if args.json else model["model_id"])
+    return 0

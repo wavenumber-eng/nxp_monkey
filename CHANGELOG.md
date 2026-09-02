@@ -10,6 +10,11 @@ this project adheres to date-based PEP 440 versions per ADR-0001
 
 ### Added
 
+- Added fail-closed KEX normalized-model v2 generation through the public
+  `normalize_kex_model` API and `model normalize-kex` command. The model expands
+  register templates, preserves all five package pin/mux graphs, carries
+  clock/resource documents, and emits compact subtree provenance from a
+  verified offline KEX acquisition lock.
 - Added the optional `source` extra, library-first official MCUXpresso west
   manifest resolution, deterministic source-lock v0 output, and strict offline
   verification. KEX is structurally excluded from this workflow.

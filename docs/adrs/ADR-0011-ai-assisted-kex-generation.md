@@ -25,7 +25,7 @@ AI-assisted agents and tools may:
 - discover and fetch the requested NXP part;
 - inspect and compare raw XML, its schema-oriented JSON projection, and derived schema
   inventories;
-- normalize source facts with field-level provenance;
+- normalize source facts with exact-source-set provenance;
 - generate and validate portable models, CMSIS-SVD, PAC metadata, Rust PAC
   output, and semantic reports; and
 - run scoped network tests needed to prove acquisition and replay behavior.
@@ -51,6 +51,22 @@ existing v0 lock is silently modified or reinterpreted.
 NXP Monkey continues to stop at acquisition, normalized portable models, and
 source comparison. CMSIS-SVD and nxp-pac adapters remain independently tested
 downstream boundaries.
+
+For normalized-model v2, this decision supersedes ADR-0010's requirement for
+one provenance record per leaf. A v2 provenance record may cover the complete
+subtree rooted at its JSON Pointer. Every carried leaf must have an ancestor
+record; the nearest ancestor record is its exact source set, and a more-specific
+record overrides inheritance for that subtree. Each source entry contains a
+resolvable locked-source locator and a fingerprint of the referenced source
+value. Duplicate pointers, uncovered leaves, unknown sources, invalid locators,
+and missing fingerprints fail validation. Pre-v2 models (normalized-model v0
+and v1) retain the per-leaf rule from ADR-0010.
+
+The installed MCUXpresso Config Tools implementation may be inspected as a
+pinned reference for vendor XML parser and generated-model semantics. Its
+binary identity and derived conclusions must be recorded, decompiled material
+must remain local, and no device hardware fact may originate from executable
+code when the locked KEX data does not establish that fact.
 
 ## Consequences
 
