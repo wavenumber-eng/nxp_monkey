@@ -153,3 +153,36 @@ def test_kex_lock_rejects_schema_shape_drift(tmp_path):
     payload["lock_id"] = kex_lock_id(payload)
     with pytest.raises(nxp_monkey.KexLockError, match="schema shapes differ"):
         nxp_monkey.verify_kex_acquisition_lock(lock=payload, cache_dir=cache, offline=True)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        (("canonicalization",), "invented", "canonicalization"),
+        (("json_mirror", "algorithm"), "invented", "mirror algorithm"),
+        (("schema_shapes", "algorithm"), "invented", "schema-shape algorithm"),
+        (("verification", "command"), ["invented"], "verification command"),
+    ],
+)
+def test_kex_lock_rejects_unsupported_declared_algorithms(
+    tmp_path, field, value, message
+):
+    """Runtime verification enforces the algorithms declared by lock v1."""
+    cache = _stage_cache(tmp_path)
+    output = tmp_path / "lock.json"
+    nxp_monkey.create_kex_acquisition_lock(
+        part="MCXA156",
+        upstream_version="26.06",
+        variants=["ksdk2_0"],
+        cache_dir=cache,
+        output=output,
+        producer_revision="f" * 40,
+    )
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    target = payload
+    for key in field[:-1]:
+        target = target[key]
+    target[field[-1]] = value
+    payload["lock_id"] = kex_lock_id(payload)
+    with pytest.raises(nxp_monkey.KexLockError, match=message):
+        nxp_monkey.verify_kex_acquisition_lock(lock=payload, cache_dir=cache, offline=True)

@@ -48,7 +48,7 @@
       },
       "additionalProperties": false
     },
-    "canonicalization": {"type": "string"},
+    "canonicalization": {"const": "json-sort-keys-indent-2-lf-final-newline-v1"},
     "policy": {
       "const": {
         "ai_assisted_generation": "allowed",

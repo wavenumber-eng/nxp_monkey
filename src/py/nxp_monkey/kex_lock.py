@@ -19,6 +19,9 @@ _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$")
 _XMLNS_RE = re.compile(r'xmlns(?::([\w.-]+))?\s*=\s*["\']([^"\']+)["\']')
 _XSI_SCHEMA_LOCATION = "{http://www.w3.org/2001/XMLSchema-instance}schemaLocation"
+_CANONICALIZATION = "json-sort-keys-indent-2-lf-final-newline-v1"
+_MIRROR_ALGORITHM = "nxp_monkey.xml_json.xml_file_to_dict-json-indent-2-v1"
+_SHAPE_ALGORITHM = "qualified-path-attributes-observed-cardinality-v1"
 
 
 class KexLockError(RuntimeError):
@@ -68,9 +71,9 @@ def create_kex_acquisition_lock(
     lock: dict[str, object] = {
         "$schema": "https://wavenumber.dev/nxp-monkey/kex-acquisition-lock.schema.v1.json",
         "archives": archives,
-        "canonicalization": "json-sort-keys-indent-2-lf-final-newline-v1",
+        "canonicalization": _CANONICALIZATION,
         "json_mirror": {
-            "algorithm": "nxp_monkey.xml_json.xml_file_to_dict-json-indent-2-v1",
+            "algorithm": _MIRROR_ALGORITHM,
             "files": mirror_files,
         },
         "policy": {
@@ -99,7 +102,7 @@ def create_kex_acquisition_lock(
         "schema_version": "1",
         "schemas": schemas,
         "schema_shapes": {
-            "algorithm": "qualified-path-attributes-observed-cardinality-v1",
+            "algorithm": _SHAPE_ALGORITHM,
             "paths": schema_shapes,
         },
         "verification": {
@@ -300,8 +303,16 @@ def _validate_lock(lock: dict[str, object]) -> None:
         raise KexLockError(f"KEX lock is missing fields: {missing}")
     if lock["schema_version"] != "1":
         raise KexLockError("unsupported KEX lock schema version")
+    if lock["canonicalization"] != _CANONICALIZATION:
+        raise KexLockError("unsupported KEX lock canonicalization")
     if not lock["archives"] or not lock["raw_files"]:
         raise KexLockError("KEX lock must bind archives and raw files")
+    _validate_producer_and_request(lock)
+    _validate_locked_inputs(lock)
+    _validate_lock_policy(lock)
+
+
+def _validate_producer_and_request(lock: dict[str, object]) -> None:
     producer = _mapping(lock["producer"], "producer")
     if not _COMMIT_RE.fullmatch(_text(producer.get("revision"), "producer.revision")):
         raise KexLockError("KEX lock producer revision is not an exact commit")
@@ -312,10 +323,15 @@ def _validate_lock(lock: dict[str, object]) -> None:
     _text(request["part"], "request.part")
     _text(request["upstream_version"], "request.upstream_version")
     _string_list(request["variants"], "request.variants")
+
+
+def _validate_locked_inputs(lock: dict[str, object]) -> None:
     _validate_file_records(_records(lock["archives"], "archives"), "archives", size=True)
     _validate_file_records(_records(lock["raw_files"], "raw_files"), "raw_files", size=True)
     mirror = _mapping(lock["json_mirror"], "json_mirror")
     _require_keys(mirror, {"algorithm", "files"}, "json_mirror")
+    if mirror["algorithm"] != _MIRROR_ALGORITHM:
+        raise KexLockError("unsupported JSON mirror algorithm")
     _validate_file_records(_records(mirror["files"], "json_mirror.files"), "mirrors")
     for schema in _records(lock["schemas"], "schemas"):
         _require_keys(
@@ -327,8 +343,13 @@ def _validate_lock(lock: dict[str, object]) -> None:
             _text(schema[key], f"schema.{key}")
     shapes = _mapping(lock["schema_shapes"], "schema_shapes")
     _require_keys(shapes, {"algorithm", "paths"}, "schema_shapes")
+    if shapes["algorithm"] != _SHAPE_ALGORITHM:
+        raise KexLockError("unsupported schema-shape algorithm")
     for shape in _records(shapes["paths"], "schema_shapes.paths"):
         _validate_schema_shape(shape)
+
+
+def _validate_lock_policy(lock: dict[str, object]) -> None:
     policy = _mapping(lock["policy"], "policy")
     if policy != {
         "ai_assisted_generation": "allowed",
@@ -336,6 +357,13 @@ def _validate_lock(lock: dict[str, object]) -> None:
         "retention": "local-cache",
     }:
         raise KexLockError("KEX lock policy is not the v1 policy")
+    verification = _mapping(lock["verification"], "verification")
+    _require_keys(verification, {"command"}, "verification")
+    if _string_list(verification["command"], "verification.command") != [
+        "nxp-monkey", "kex-lock", "verify", "--lock", "${LOCK}",
+        "--cache", "${CACHE}", "--offline",
+    ]:
+        raise KexLockError("KEX lock verification command is not the v1 command")
 
 
 def _validate_file_records(
