@@ -1,9 +1,15 @@
-"""Lossless XML -> JSON serialization for the KEX data trees.
+"""Schema-oriented XML -> JSON projection for the KEX data trees.
 
 Walks a ``processors/<PART>/<VARIANT>/`` tree (or any directory of NXP
 KEX XML files) and emits a parallel JSON tree, one ``.json`` per
 ``.xml``. Designed for authorized JSON consumers that do not have an
 XML parser.
+
+This representation is deterministic and preserves the values used by the
+known KEX schemas, but it is not a reversible or byte-lossless XML encoding.
+It normalizes whitespace, uses local names, groups like-named children, and
+does not retain comments, prefixes, or child tail text. Locked raw XML remains
+the authority whenever lexical order or namespace-qualified identity matters.
 
 Conversion convention (xmltodict-style, namespace-stripped tags):
 
@@ -18,6 +24,7 @@ Conversion convention (xmltodict-style, namespace-stripped tags):
 """
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -31,6 +38,11 @@ ProgressCallback = Callable[[int, int, str], None]
 
 _NS_TAG_RE = re.compile(r"\{[^}]+\}")
 _XMLNS_RE = re.compile(r'xmlns(?::([\w.-]+))?\s*=\s*"([^"]+)"')
+
+
+def _projection_bytes(payload: object) -> bytes:
+    """Serialize one projected XML object exactly as the mirror writer does."""
+    return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode()
 
 
 def _strip_ns(tag: str) -> str:
@@ -127,8 +139,6 @@ def mirror_xml_tree_as_json(
         Number of JSON files successfully written.
     """
     import fnmatch
-    import json
-
     json_root.mkdir(parents=True, exist_ok=True)
     inc = include or []
     exc = exclude or []
@@ -155,10 +165,7 @@ def mirror_xml_tree_as_json(
         except ET.ParseError:
             continue
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(
-            json.dumps(payload, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        out_path.write_bytes(_projection_bytes(payload))
         written += 1
         if progress_callback is not None:
             progress_callback(written, total, rel_posix)

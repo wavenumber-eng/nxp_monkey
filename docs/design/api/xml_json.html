@@ -16,7 +16,7 @@
   <p><strong>Kind:</strong> function.</p>
   <p>
     Parse one KEX XML file and return a JSON-friendly <code>dict</code>.
-    The conversion is lossless for data:
+    The conversion is a deterministic schema-oriented projection:
   </p>
   <ul>
     <li>Element tags are namespace-stripped (the local name).</li>
@@ -37,7 +37,9 @@
     a namespace-stripped tree of the silicon data. A namespace-stripped tree
     with an <code>@_xmlns</code> sidecar gives readability without
     losing the namespace family. xmltodict-style conventions keep the
-    output predictable.
+    output predictable. It is not byte-reversible and does not retain lexical
+    whitespace, prefixes, comments, tail text, or ordering between differently
+    named sibling groups. Raw XML remains the authority for those properties.
   </p>
 </section>
 

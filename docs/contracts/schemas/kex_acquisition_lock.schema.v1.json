@@ -3,7 +3,7 @@
   "$id": "https://wavenumber.dev/nxp-monkey/kex-acquisition-lock.schema.v1.json",
   "title": "NXP Monkey KEX acquisition lock v1",
   "type": "object",
-  "required": ["archives", "canonicalization", "json_mirror", "lock_id", "policy", "producer", "raw_files", "request", "schema_version", "schemas", "verification"],
+  "required": ["archives", "canonicalization", "json_mirror", "lock_id", "policy", "producer", "raw_files", "request", "schema_shapes", "schema_version", "schemas", "verification"],
   "properties": {
     "schema_version": {"const": "1"},
     "lock_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
@@ -25,11 +25,45 @@
     },
     "archives": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/file"}},
     "raw_files": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/file"}},
-    "json_mirror": {"type": "object"},
-    "schemas": {"type": "array"},
+    "json_mirror": {
+      "type": "object",
+      "required": ["algorithm", "files"],
+      "properties": {
+        "algorithm": {"const": "nxp_monkey.xml_json.xml_file_to_dict-json-indent-2-v1"},
+        "files": {"type": "array", "items": {"$ref": "#/$defs/mirror_file"}}
+      },
+      "additionalProperties": false
+    },
+    "schemas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/schema_identity"}
+    },
+    "schema_shapes": {
+      "type": "object",
+      "required": ["algorithm", "paths"],
+      "properties": {
+        "algorithm": {"const": "qualified-path-attributes-observed-cardinality-v1"},
+        "paths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/schema_shape"}}
+      },
+      "additionalProperties": false
+    },
     "canonicalization": {"type": "string"},
-    "policy": {"type": "object"},
-    "verification": {"type": "object"}
+    "policy": {
+      "const": {
+        "ai_assisted_generation": "allowed",
+        "raw_input_redistribution": "not-granted-by-this-lock",
+        "retention": "local-cache"
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
   },
   "$defs": {
     "file": {
@@ -42,6 +76,51 @@
         "variant": {"type": "string"}
       },
       "additionalProperties": true
+    },
+    "mirror_file": {
+      "type": "object",
+      "required": ["path", "sha256", "variant"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "variant": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "schema_identity": {
+      "type": "object",
+      "required": ["namespace", "namespace_declarations", "root", "schema_location"],
+      "properties": {
+        "namespace": {"type": "string"},
+        "namespace_declarations": {"type": "string"},
+        "root": {"type": "string", "minLength": 1},
+        "schema_location": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "schema_shape": {
+      "type": "object",
+      "required": ["attributes", "children", "files", "occurrences", "path", "text_modes", "variant"],
+      "properties": {
+        "attributes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/child_cardinality"}},
+        "files": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "occurrences": {"type": "integer", "minimum": 1},
+        "path": {"type": "string", "pattern": "^/Q\\{"},
+        "text_modes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["mixed", "none", "value"]}},
+        "variant": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "child_cardinality": {
+      "type": "object",
+      "required": ["name", "observed_max", "observed_min"],
+      "properties": {
+        "name": {"type": "string"},
+        "observed_max": {"type": "integer", "minimum": 0},
+        "observed_min": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

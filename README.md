@@ -21,7 +21,7 @@
 
 Cross-platform CLI and Python library for fetching, indexing, and searching
 NXP MCUXpresso Config Tools chip data, with both **XML** (raw NXP binders)
-and **JSON** (parsed spine + lossless XML->JSON mirror) output by default.
+and **JSON** (parsed spine + schema-oriented XML->JSON projection) output by default.
 
 `nxp_monkey` talks to NXP's public KEX storage API (the same one the
 MCUXpresso Config Tools Data Manager uses) and exposes the per-processor
@@ -128,9 +128,11 @@ clean list of paths so it pipes well.
 | Pin mux for a specific SKU | `json/<variant>/<SKU>/signal_configuration.json` |
 | The bit-identical NXP binder (codegen scripts, exact whitespace) | `xml/<variant>/...` |
 
-The XML->JSON conversion is lossless for data: namespace-stripped tags,
+The XML->JSON conversion is a deterministic schema-oriented view: namespace-stripped tags,
 `@attr` keys for attributes, `#text` for mixed content, repeated children
-as lists, root `@_xmlns` preserves the source namespace declarations.
+as lists, root `@_xmlns` preserves the source namespace declarations. It is
+not byte-reversible: whitespace, prefixes, mixed-child ordering, comments,
+and tail text are not retained. The raw XML remains authoritative.
 Skip the mirror with `--no-json-mirror`, or narrow it with
 `--json-mirror-only '**/registers/**'` (repeatable glob).
 

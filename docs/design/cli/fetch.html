@@ -75,7 +75,7 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
   json/
     &lt;PART&gt;.json                    # PartDetails spine: header, cores, packages, db_links
     &lt;PART&gt;.roadmap.json            # tree guide + inferred schema + folder layout
-    ksdk2_0/...                     # full lossless XML-&gt;JSON mirror (one .json per .xml)
+    ksdk2_0/...                     # schema-oriented XML-&gt;JSON projection (one .json per .xml)
     zephyr3_2/...
     i_mx_2_0/...</code></pre>
   <p>
@@ -90,11 +90,12 @@ nxp-monkey fetch --all              [...same flags...]</code></pre>
   <p>
     For each fetched variant, <code>fetch</code> walks the XML tree and
     writes a parallel <code>.json</code> tree under
-    <code>DIR/&lt;PART&gt;/json/&lt;VARIANT&gt;/</code>. The conversion is lossless for
-    data: tags are namespace-stripped, attributes are <code>@attr</code>
+    <code>DIR/&lt;PART&gt;/json/&lt;VARIANT&gt;/</code>. The conversion is a deterministic
+    schema-oriented view: tags are namespace-stripped, attributes are <code>@attr</code>
     keys, mixed text uses <code>#text</code>, repeated children become
     lists, and the source <code>xmlns</code> map is preserved on the root
-    as <code>@_xmlns</code>. See <code>nxp_monkey/xml_json.py</code>.
+    as <code>@_xmlns</code>. It is not byte-reversible; raw XML remains
+    authoritative. See <code>nxp_monkey/xml_json.py</code>.
   </p>
   <table>
     <tr><th>Flag</th><th>Effect</th></tr>

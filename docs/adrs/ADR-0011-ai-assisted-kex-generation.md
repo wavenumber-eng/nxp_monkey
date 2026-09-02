@@ -23,7 +23,7 @@ Current NXP Monkey JSON/XML is authorized as AI/model input for this program.
 AI-assisted agents and tools may:
 
 - discover and fetch the requested NXP part;
-- inspect and compare raw XML, its lossless JSON mirror, and derived schema
+- inspect and compare raw XML, its schema-oriented JSON projection, and derived schema
   inventories;
 - normalize source facts with field-level provenance;
 - generate and validate portable models, CMSIS-SVD, PAC metadata, Rust PAC

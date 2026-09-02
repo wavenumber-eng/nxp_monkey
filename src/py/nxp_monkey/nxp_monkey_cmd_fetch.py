@@ -580,8 +580,8 @@ def _part_folder_layout(
             "under xml/ has a corresponding foo.json here. "
             "Namespace-stripped tags; attributes as '@name'; mixed text "
             "as '#text'; repeated children as lists; root '@_xmlns' "
-            "preserves the source namespace declarations. Lossless for "
-            "authorized data processing."
+            "preserves the source namespace declarations. This is a "
+            "schema-oriented view; raw XML remains authoritative."
         )
     return {
         "part_folder": f"{part}/",
