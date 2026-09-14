@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and
 this project adheres to date-based PEP 440 versions per ADR-0001
 (`YYYY.M.D[.N]`).
 
+## [2026.9.14] - 2026-09-14
+
+### Changed
+
+- Widened the supported Python range from 3.12 only to 3.12 through 3.14 so
+  the CLI installs on workspaces whose default tool interpreter is Python
+  3.14. No command, cache layout, or public API behavior changed.
+- CI now exercises Python 3.12, 3.13, and 3.14 on every platform.
+- Pinned the hatchling build backend below 1.31 so built distributions keep
+  Metadata-Version 2.4, which `twine check` and PyPI validation accept.
+
 ## [2026.6.9] - 2026-06-09
 
 ### Added
