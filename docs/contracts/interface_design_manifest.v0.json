@@ -298,6 +298,13 @@
       "test_file": "tests/L3_public_workflows/test_kex_model.py"
     },
     {
+      "symbol": "verify_kex_model",
+      "kind": "function",
+      "module": "nxp_monkey.kex_model",
+      "design_doc": "docs/design/api/model.html",
+      "test_file": "tests/L3_public_workflows/test_kex_model.py"
+    },
+    {
       "symbol": "compare_models",
       "kind": "function",
       "module": "nxp_monkey.model",

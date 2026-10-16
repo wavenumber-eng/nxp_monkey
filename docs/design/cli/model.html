@@ -6,7 +6,7 @@
   <p>
     <code>model normalize</code> verifies a retained source lock and cache with
     networking disabled, consumes only the lock-declared files, and writes a
-    canonical portable model. <code>--offline</code> is mandatory.
+    canonical portable model v1. <code>--offline</code> is mandatory.
   </p>
   <p>
     <code>model normalize-kex</code> verifies a KEX acquisition lock offline and
@@ -17,6 +17,14 @@
     subtree. <code>--accepted-lock-id</code> must exactly match the verified
     lock and <code>--generator-revision</code> must be a full 40-hex commit;
     both values are embedded in the artifact contract.
+  </p>
+  <p>
+    <code>model verify-kex --model &lt;model.json&gt;</code> validates an
+    existing normalized-model v2 file against its schema, content identity,
+    provenance coverage, and semantic invariants. It does not re-read the
+    original KEX cache; source-byte verification belongs to the acquisition
+    lock and normalization steps. It prints the model identity, or the
+    model path when the global <code>--json</code> flag is used.
   </p>
   <p>
     <code>model compare</code> compares portable model JSON, supported nxp-pac

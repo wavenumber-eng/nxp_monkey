@@ -92,3 +92,19 @@ name = "KEX Acquisition Lock"
 description = "Create deterministic KEX locks and verify retained bytes offline"
 concerns = ["source-lock", "cache", "provenance"]
 test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_011"
+file = "test_kex_model.py"
+name = "KEX Portable Model"
+description = "Normalize synthetic locked KEX inputs into model v2 and reject invalid identities and semantics"
+concerns = ["model", "provenance", "source-lock"]
+test_case_type = "workflow"
+
+[[subtests]]
+id = "L3_012"
+file = "test_model.py"
+name = "Portable Model"
+description = "Normalize official-source inputs into model v1 and classify semantic comparisons"
+concerns = ["model", "provenance", "source-lock"]
+test_case_type = "workflow"

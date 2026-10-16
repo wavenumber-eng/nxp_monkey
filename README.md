@@ -32,12 +32,15 @@ portable-model, CMSIS-SVD, PAC, and validation generation. Raw payload
 redistribution remains a separate disposition and is not implied by permission
 to process the data.
 
-ADR-0010 also defines a staged expansion for reproducible official
+ADR-0010 also defines the boundary for reproducible official
 MCUXpresso SDK manifest resolution, immutable source-lock verification, and a
 portable silicon/package/board model. The optional <code>source</code> extra
-provides exact Git-only source resolution and offline lock verification. The
-portable model commands remain staged until their implementation and tests
-land together.
+provides exact Git-only source resolution and offline lock verification.
+This development branch implements portable-model v1 normalization and
+comparison, KEX acquisition-lock v1 creation and offline verification, and
+portable-model v2 normalization and validation. See the
+[model command contract](docs/design/cli/model.html) and
+[KEX lock command contract](docs/design/cli/kex-lock.html) for their inputs.
 
 ## Install
 
