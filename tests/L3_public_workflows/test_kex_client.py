@@ -1,8 +1,14 @@
 """Exercise :class:`nxp_monkey.KexClient` against offline fixtures."""
 from __future__ import annotations
 
+import ssl
+from unittest.mock import MagicMock
+from urllib import error
+
+import certifi
 import nxp_monkey
 import pytest
+from nxp_monkey import kex_client
 
 from tests.support_scripts.fake_urlopen import patch_urlopen
 
@@ -105,3 +111,67 @@ def test_canonicalize_family_reports_ambiguous_prefix(monkeypatch):
     client = nxp_monkey.KexClient()
     with pytest.raises(nxp_monkey.NxpFetchError, match="matches 2 processor families"):
         client.canonicalize_family("MIMX93")
+
+
+@pytest.mark.parametrize("download", [False, True])
+def test_kex_requests_use_fixed_roots_and_verify_hostnames(monkeypatch, tmp_path, download):
+    """Metadata and archives use fixed roots even with stale host CA overrides."""
+    monkeypatch.setenv("SSL_CERT_FILE", str(tmp_path / "stale-ca.pem"))
+    monkeypatch.setenv("SSL_CERT_DIR", str(tmp_path / "stale-certs"))
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.read.side_effect = [b"payload", b""]
+    response.headers = {"Content-Length": "7"}
+    urlopen = MagicMock(return_value=response)
+    monkeypatch.setattr(kex_client.request, "urlopen", urlopen)
+
+    if download:
+        client = nxp_monkey.KexClient(version="25.12.10")
+        output = tmp_path / "archive.zip"
+        assert client.download_directory_zip("MCXA156", "ksdk2_0", output) == 7
+        assert output.read_bytes() == b"payload"
+    else:
+        assert kex_client._read_url_bytes(kex_client.NPIDB_BASE) == b"payload"
+
+    context = urlopen.call_args.kwargs["context"]
+    assert isinstance(context, ssl.SSLContext)
+    assert context.check_hostname
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    expected = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    expected.load_verify_locations(certifi.where())
+    assert set(context.get_ca_certs(binary_form=True)) == set(
+        expected.get_ca_certs(binary_form=True)
+    )
+    names = {
+        value
+        for certificate in context.get_ca_certs()
+        for rdn in certificate["subject"]
+        for key, value in rdn
+        if key == "commonName"
+    }
+    assert names
+    assert not names & {"emSign ECC Root CA - G3", "AAA Certificate Services"}
+    assert tuple(map(int, certifi.__version__.split("."))) >= (2026, 10, 19)
+
+
+@pytest.mark.parametrize("download", [False, True])
+def test_kex_certificate_failure_never_disables_verification(monkeypatch, tmp_path, download):
+    """Certificate errors fail closed through metadata and archive retry paths."""
+    urlopen = MagicMock(
+        side_effect=error.URLError(ssl.SSLCertVerificationError("untrusted issuer"))
+    )
+    monkeypatch.setattr(kex_client.request, "urlopen", urlopen)
+    monkeypatch.setattr(kex_client.time, "sleep", lambda seconds: None)
+    output = tmp_path / "archive.zip"
+    with pytest.raises(nxp_monkey.NxpFetchError, match="untrusted issuer"):
+        if download:
+            client = nxp_monkey.KexClient(version="25.12.10", retries=0)
+            client.download_directory_zip("MCXA156", "ksdk2_0", output)
+        else:
+            kex_client._read_url_bytes(kex_client.NPIDB_BASE)
+
+    assert not output.exists()
+    for call in urlopen.call_args_list:
+        context = call.kwargs["context"]
+        assert context.check_hostname
+        assert context.verify_mode == ssl.CERT_REQUIRED

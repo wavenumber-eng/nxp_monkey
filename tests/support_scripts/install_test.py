@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -63,21 +64,37 @@ def _clean_env(venv_dir: Path) -> dict[str, str]:
     return env
 
 
+def _uv_executable() -> str:
+    """Require a fixed uv before fetching installed-test dependencies."""
+    command = shutil.which("uv")
+    if command is None:
+        raise SystemExit("uv >=0.13.4 is required for installed-package tests")
+    version = subprocess.check_output([command, "--version"], text=True).split()[1]
+    if tuple(map(int, version.split("."))) < (0, 13, 4):
+        raise SystemExit(f"uv >=0.13.4 is required; found {version}")
+    return command
+
+
 def run_install_test(wheel: Path) -> None:
     """Install a wheel into a temporary venv and verify import/version behavior."""
     wheel = wheel.resolve()
     if not wheel.exists():
         raise SystemExit(f"Wheel does not exist: {wheel}")
+    uv = _uv_executable()
 
     with tempfile.TemporaryDirectory(prefix="nxp_monkey_install_test_") as temp:
         temp_dir = Path(temp)
         venv_dir = temp_dir / "venv"
         sys.stdout.write(f"Creating test venv: {venv_dir}\n")
-        _run([sys.executable, "-m", "venv", str(venv_dir)], cwd=temp_dir)
+        _run([sys.executable, "-m", "venv", "--without-pip", str(venv_dir)], cwd=temp_dir)
 
         python = _venv_python(venv_dir)
         env = _clean_env(venv_dir)
-        _run([str(python), "-m", "pip", "install", str(wheel)], cwd=temp_dir, env=env)
+        _run(
+            [uv, "pip", "install", "--python", str(python), str(wheel)],
+            cwd=temp_dir,
+            env=env,
+        )
         _run(
             [
                 str(python),

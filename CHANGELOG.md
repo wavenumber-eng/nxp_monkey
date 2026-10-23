@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and
 this project adheres to date-based PEP 440 versions per ADR-0001
 (`YYYY.M.D[.N]`).
 
+## [2026.10.22] - 2026-10-22
+
+### Security
+
+- Require Certifi `>=2026.10.19` and explicitly use its CA bundle for KEX
+  metadata and ZIP downloads following the eMudhra/emSign CA incident.
+  Certificate-chain and hostname verification remain required. System trust
+  stores and `SSL_CERT_FILE`/`SSL_CERT_DIR` no longer expand KEX trust.
+- Require uv `>=0.13.4`, use uv for isolated builds and installed-wheel
+  tests, refresh Linux CI certificates, and pin the publishing action to
+  upstream's fixed Certifi/Sigstore release.
+
 ## [2026.9.14] - 2026-09-14
 
 ### Changed

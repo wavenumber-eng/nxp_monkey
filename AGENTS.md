@@ -21,7 +21,7 @@ Run the package signoff before release-facing changes:
 
 ```bash
 uv run rack run --all
-uv run python -m build
+uv run python -m build --installer uv
 uv run twine check dist/*
 uv run python tests/support_scripts/install_test.py
 ```
