@@ -8,6 +8,7 @@ objectives = [
     "Validate KEX client parsing against saved fixtures",
     "Validate index, search, fetch, details, roadmap, cache, and XML/JSON workflows",
     "Keep public library behavior stable without requiring network access",
+    "Verify fixed CA roots and fail-closed certificate checks for metadata and archives",
 ]
 
 [dependencies]
@@ -17,7 +18,7 @@ strata = ["L0_public_cli"]
 id = "L3_001"
 file = "test_kex_client.py"
 name = "KEX Client"
-description = "Exercise version and family discovery against fixtures"
+description = "Exercise version and family discovery against fixtures and verify TLS trust and certificate failures"
 concerns = ["api", "fixtures"]
 test_case_type = "workflow"
 

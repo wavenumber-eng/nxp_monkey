@@ -19,6 +19,17 @@
     the package that knows upstream URL shapes; everything else goes through
     it. See <a href="../../adrs/ADR-0007-kex-upstream-and-version-resolution.md">ADR-0007</a>.
   </p>
+  <h3>HTTPS trust</h3>
+  <p>
+    Metadata and streamed ZIP requests use an explicit SSL context loaded
+    from <code>certifi&gt;=2026.10.19</code>. Hostname and certificate-chain
+    verification are required. System roots and
+    <code>SSL_CERT_FILE</code>/<code>SSL_CERT_DIR</code> do not expand the
+    trusted issuers. Verification failures raise <code>NxpFetchError</code>;
+    retries never disable verification. See the
+    <a href="../../releases/2026-10-22.md">security release notes</a> for
+    the trust-policy change and upgrade procedure.
+  </p>
   <h3>Why a class</h3>
   <p>
     The client carries cache state (version list, portfolio map) and resolves

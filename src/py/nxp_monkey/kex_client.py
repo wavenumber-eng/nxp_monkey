@@ -18,6 +18,7 @@ manage a client instance.
 from __future__ import annotations
 
 import json
+import ssl
 import time
 from collections.abc import Callable
 from dataclasses import asdict
@@ -26,6 +27,8 @@ from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
 from xml.etree import ElementTree
+
+import certifi
 
 from . import cache
 from ._matching import portfolio_part_matches
@@ -100,11 +103,16 @@ def _request(url: str) -> request.Request:
     return request.Request(url, headers={"User-Agent": USER_AGENT})
 
 
+def _tls_context() -> ssl.SSLContext:
+    """Use the updated Certifi roots without inheriting stale system CAs."""
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def _read_url_bytes(url: str, *, timeout_s: int = DEFAULT_TIMEOUT_S) -> bytes:
     """Fetch ``url`` and return its raw body bytes."""
     req = _request(url)
     try:
-        with request.urlopen(req, timeout=timeout_s) as response:
+        with request.urlopen(req, timeout=timeout_s, context=_tls_context()) as response:
             return response.read()
     except error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
@@ -477,7 +485,9 @@ class KexClient:
             attempt += 1
             req = _request(url)
             try:
-                with request.urlopen(req, timeout=self._download_timeout_s) as response:
+                with request.urlopen(
+                    req, timeout=self._download_timeout_s, context=_tls_context()
+                ) as response:
                     total_header = response.headers.get("Content-Length")
                     try:
                         total: int | None = int(total_header) if total_header else None

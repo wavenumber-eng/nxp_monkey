@@ -41,7 +41,7 @@ def patch_urlopen(monkeypatch, responder: Responder):
     from nxp_monkey import fetch as fetch_mod
     from nxp_monkey import kex_client as kex_mod
 
-    def fake(req, timeout=None):  # noqa: ARG001
+    def fake(req, timeout=None, *, context=None):  # noqa: ARG001
         url = req.full_url if hasattr(req, "full_url") else str(req)
         return _FakeResponse(responder(url))
 

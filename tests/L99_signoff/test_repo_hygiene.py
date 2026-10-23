@@ -7,6 +7,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import cast
 
+import pytest
+
+from tests.support_scripts import install_test
+
 REPO = Path(__file__).resolve().parents[2]
 REQUIRED_FILES = (
     ".gitattributes",
@@ -68,3 +72,19 @@ def test_setup_doc_records_tooling_and_binary_distribution_policy():
     assert "Rack" in setup_doc
     assert "dist/native/windows-x64/" in setup_doc
     assert "dist/wasm/browser/" in setup_doc
+
+
+def test_install_test_rejects_old_uv_before_downloads(monkeypatch, tmp_path):
+    """Installed-package validation rejects an affected installer before use."""
+    wheel = tmp_path / "nxp_monkey-test.whl"
+    wheel.write_bytes(b"wheel")
+    calls = []
+    monkeypatch.setattr(install_test.shutil, "which", lambda name: "uv")
+    monkeypatch.setattr(
+        install_test.subprocess, "check_output", lambda *args, **kwargs: "uv 0.11.27"
+    )
+    monkeypatch.setattr(install_test, "_run", lambda *args, **kwargs: calls.append(args))
+
+    with pytest.raises(SystemExit, match=r"uv >=0.13.4 is required"):
+        install_test.run_install_test(wheel)
+    assert calls == []

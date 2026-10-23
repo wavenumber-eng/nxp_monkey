@@ -11,7 +11,7 @@
   <h2>Required Tools</h2>
   <ul>
     <li>Python 3.12, 3.13, or 3.14</li>
-    <li>uv</li>
+    <li>uv 0.13.4 or newer</li>
     <li>Git</li>
   </ul>
 
@@ -20,9 +20,22 @@
 uv run nxp-monkey --version
 uv run nxp-monkey version
 uv run rack run --all
-uv run python -m build
+uv run python -m build --installer uv
 uv run twine check dist/*
 uv run python tests/support_scripts/install_test.py</code></pre>
+
+  <h2>Certificate Trust</h2>
+  <p>
+    Runtime KEX connections use Certifi 2026.10.19 or newer with certificate
+    and hostname verification enabled. Keep the host OS trust store current
+    for other tools. Use pip 26.2.2 or newer wherever pip is installed; follow
+    the checksum-pinned bootstrap in the
+    <a href="https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576">incident notice</a>
+    when starting from an affected installer. Package builds use
+    <code>--installer uv</code>; installed-wheel tests use uv and do not seed pip.
+    See the <a href="releases/2026-10-22.md">2026.10.22 release notes</a>
+    for runtime trust-policy compatibility details.
+  </p>
 
   <h2>Release</h2>
   <p>

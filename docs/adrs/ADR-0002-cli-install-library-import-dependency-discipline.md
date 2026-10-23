@@ -77,6 +77,23 @@ Initial dependencies (v0.1):
 | `build`, `twine` | test-only | Package build verification. |
 | `wn-rack` | test-only | Wavenumber stratum-based signoff runner for local and CI release gates. |
 
+### October 2026 certificate dependency
+
+`certifi>=2026.10.19` is a required runtime dependency for the eMudhra/emSign
+CA remediation. The standard-library HTTPS transport remains in use, but
+its default system trust store may retain affected roots independently of
+the package or Python environment. Existing dependencies do not provide an
+independently maintained CA bundle.
+
+Metadata and ZIP requests therefore create an explicit verified SSL context
+from Certifi. OS roots and ambient CA-file/directory overrides are not merged
+into that context. This makes the fixed trust policy portable without adding
+another HTTP client or disabling certificate or hostname verification.
+
+Certifi adds a small pure-Python dependency and Mozilla CA data (roughly
+140 KB as a wheel). It is MPL-2.0 licensed, compatible with this MIT package's
+use as an external dependency, and is not vendored into NXP Monkey artifacts.
+
 ### License
 
 `nxp_monkey` is licensed MIT. The package does not statically link or vendor
